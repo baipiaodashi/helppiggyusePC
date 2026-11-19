@@ -38,7 +38,7 @@ public sealed class CleanItem : INotifyPropertyChanged
         set { if (Set(ref _size, value)) OnPropertyChanged(nameof(SizeText)); }
     }
 
-    public string SizeText => _size < 0 ? "" : Format.Bytes(_size);
+    public string SizeText => _size <= 0 ? "" : Format.Bytes(_size);
 
     private string _status = "等待扫描";
     public string Status { get => _status; set => Set(ref _status, value); }

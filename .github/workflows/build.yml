@@ -38,7 +38,9 @@ jobs:
             @{ name = "2-navigator"; args = @("--page", "navigator") },
             @{ name = "3-search";    args = @("--page", "navigator", "--query", "怎么调声音") },
             @{ name = "4-cleanup";   args = @("--page", "cleanup", "--auto", "scan", "--delay", "15") },
-            @{ name = "5-bigfiles";  args = @("--page", "cleanup", "--auto", "big", "--delay", "10") }
+            @{ name = "5-bigfiles";  args = @("--page", "cleanup", "--auto", "big", "--delay", "10") },
+            @{ name = "6-shortcuts"; args = @("--page", "shortcuts") },
+            @{ name = "7-overlay";   args = @("--page", "overlay") }
           )
           $failed = $false
           foreach ($c in $cases) {

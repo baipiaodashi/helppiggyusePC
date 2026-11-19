@@ -177,6 +177,12 @@
                 </Grid>
             </ContentControl>
 
+            <StackPanel x:Name="BigEmpty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,16,40">
+                <controls:PiggyMascot Width="120" Height="120" />
+                <TextBlock x:Name="BigEmptyText" Text="点右上角的&#x201C;开始查找&#x201D;，小猪帮你翻一翻" FontSize="15" FontWeight="Bold"
+                           Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Center" Margin="0,12,0,0" />
+            </StackPanel>
+
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl x:Name="BigList" Margin="0,6,16,12" Focusable="False">
                     <ItemsControl.ItemTemplate>

@@ -184,6 +184,7 @@ public partial class CleanupPage : UserControl
         FindButton.IsEnabled = false;
         FindButton.Content = "正在查找…";
         BigStatus.Text = "正在翻找各个文件夹，文件多的话需要一会儿……";
+        BigEmptyText.Text = "小猪正在努力翻找……";
         foreach (var f in _bigFiles) f.PropertyChanged -= OnBigFileChanged;
         _bigFiles.Clear();
         var list = await Task.Run(() => BigFileService.Find());
@@ -196,6 +197,8 @@ public partial class CleanupPage : UserControl
             ? "没有找到 20MB 以上的大文件，你的电脑很整洁！"
             : $"找到 {list.Count} 个大文件，一共 {Format.Bytes(list.Sum(f => f.Size))}。从大到小排好了。";
         BigBar.Visibility = list.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        BigEmpty.Visibility = list.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+        BigEmptyText.Text = "没有找到大文件，你的电脑很整洁！";
         FindButton.Content = "重新查找";
         FindButton.IsEnabled = true;
         UpdateSelection();
@@ -235,6 +238,12 @@ public partial class CleanupPage : UserControl
         {
             f.PropertyChanged -= OnBigFileChanged;
             _bigFiles.Remove(f);
+        }
+        if (_bigFiles.Count == 0)
+        {
+            BigBar.Visibility = Visibility.Collapsed;
+            BigEmpty.Visibility = Visibility.Visible;
+            BigEmptyText.Text = "全部整理完啦！";
         }
         int failed = sel.Count - done.Count;
         _main.ShowToast(done.Count > 0

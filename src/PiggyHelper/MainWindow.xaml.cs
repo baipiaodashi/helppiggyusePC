@@ -17,6 +17,7 @@ public partial class MainWindow : Window
         VersionText.Text = "v" + App.VersionText;
         _toastTimer.Tick += (_, _) => HideToast();
         StateChanged += (_, _) => UpdateMaximizeState();
+        Closing += OnWindowClosing;
         NavHome.IsChecked = true;
     }
 
@@ -27,6 +28,26 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    /// <summary>点关闭时：默认缩到右下角托盘，按住 Ctrl 的提示卡继续可用。</summary>
+    private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (App.IsExiting) return;
+        var s = Services.SettingsService.Current;
+        if (App.Tray != null && s.CloseToTray)
+        {
+            e.Cancel = true;
+            Hide();
+            if (!s.TrayTipShown)
+            {
+                App.Tray.ShowTip("小猪还在这里哦", "我躲到右下角的托盘里啦，按住 Ctrl 一秒还能看快捷键。想彻底退出，右键小猪图标选\u201C退出小猪\u201D。");
+                s.TrayTipShown = true;
+                Services.SettingsService.Save();
+            }
+            return;
+        }
+        App.ExitApp();
+    }
 
     private void UpdateMaximizeState()
     {
@@ -77,7 +98,7 @@ public partial class MainWindow : Window
         {
             "navigator" => new NavigatorPage(this, query),
             "cleanup" => new CleanupPage(this),
-            "shortcuts" => new ComingSoonPage("快捷键指南", "可以搜索的快捷键大全；按住 Ctrl 一秒钟，还会弹出常用快捷键的小卡片。"),
+            "shortcuts" => new ShortcutsPage(this),
             "ai" => new ComingSoonPage("AI 问答", "填入自己的 API Key，就能用大白话问电脑问题。"),
             "settings" => new ComingSoonPage("设置", "提示卡开关、开机自启、AI 设置都在这里。"),
             _ => new HomePage(this),

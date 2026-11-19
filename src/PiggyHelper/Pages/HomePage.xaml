@@ -60,7 +60,7 @@
 
             <!-- ===== 三大本领 ===== -->
             <TextBlock Text="小猪的三大本领" Style="{StaticResource SectionTitle}" Margin="4,30,0,14" />
-            <controls:AdaptiveGrid MinItemWidth="230" MaxColumns="3" Spacing="18">
+            <controls:AdaptiveGrid MinItemWidth="200" MaxColumns="3" Spacing="18">
                 <Button Style="{StaticResource TileButton}" Background="#E3F7EE" Tag="cleanup" Click="OnFeatureClick">
                     <Grid Margin="22,20">
                         <Grid.ColumnDefinitions>

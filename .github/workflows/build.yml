@@ -34,17 +34,18 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force screenshots | Out-Null
           $cases = @(
-            @{ name = "home";      args = @("--page", "home") },
-            @{ name = "navigator"; args = @("--page", "navigator") },
-            @{ name = "search";    args = @("--page", "navigator", "--query", "怎么调声音") },
-            @{ name = "cleanup";   args = @("--page", "cleanup") }
+            @{ name = "1-home";      args = @("--page", "home") },
+            @{ name = "2-navigator"; args = @("--page", "navigator") },
+            @{ name = "3-search";    args = @("--page", "navigator", "--query", "怎么调声音") },
+            @{ name = "4-cleanup";   args = @("--page", "cleanup", "--auto", "scan", "--delay", "15") },
+            @{ name = "5-bigfiles";  args = @("--page", "cleanup", "--auto", "big", "--delay", "10") }
           )
           $failed = $false
           foreach ($c in $cases) {
             $out = Join-Path $PWD "screenshots/$($c.name).png"
             $p = Start-Process publish/PiggyHelper.exe -ArgumentList ($c.args + @("--screenshot", "`"$out`"")) -PassThru
             $null = $p.Handle  # 保证之后能读到退出码
-            if (-not $p.WaitForExit(60000)) { $p.Kill(); Write-Host "$($c.name): 超时"; $failed = $true; continue }
+            if (-not $p.WaitForExit(90000)) { $p.Kill(); Write-Host "$($c.name): 超时"; $failed = $true; continue }
             if ($p.ExitCode -ne 0 -or -not (Test-Path $out)) {
               Write-Host "$($c.name): 失败，退出码 $($p.ExitCode)"
               if (Test-Path "$out.error.txt") { Get-Content "$out.error.txt" }

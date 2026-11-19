@@ -13,6 +13,27 @@ public partial class App : Application
 
     // 自动测试用：--screenshot 文件路径 会在界面画好后保存截图并退出
     private string? _screenshotPath;
+    private double _screenshotDelay = 3;
+
+    /// <summary>自动测试用：打开页面后自动执行的动作（scan = 自动扫描，big = 查找大文件）。</summary>
+    public static string? AutoAction { get; private set; }
+
+    private static Mutex? _instanceMutex;
+
+    /// <summary>占用"只能开一个小猪"的锁。已经有一个在运行时返回 false。</summary>
+    public static bool ClaimSingleInstance()
+    {
+        _instanceMutex ??= new Mutex(false, "PiggyHelper.SingleInstance");
+        try { return _instanceMutex.WaitOne(0); }
+        catch (AbandonedMutexException) { return true; }
+    }
+
+    public static void ReleaseSingleInstance()
+    {
+        try { _instanceMutex?.ReleaseMutex(); } catch { }
+    }
+
+    public static void ExitApp() => Current.Shutdown();
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
@@ -24,6 +45,8 @@ public partial class App : Application
                 case "--page": startPage = e.Args[i + 1]; break;
                 case "--query": query = e.Args[i + 1]; break;
                 case "--screenshot": _screenshotPath = e.Args[i + 1]; break;
+                case "--auto": AutoAction = e.Args[i + 1]; break;
+                case "--delay": _screenshotDelay = double.Parse(e.Args[i + 1], System.Globalization.CultureInfo.InvariantCulture); break;
             }
         }
 
@@ -33,7 +56,7 @@ public partial class App : Application
 
         if (_screenshotPath != null)
         {
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_screenshotDelay) };
             timer.Tick += (_, _) =>
             {
                 timer.Stop();

@@ -566,7 +566,7 @@
 
     <!-- ===== 功能导航卡片（横向：图标 + 标题 + 小字说明） ===== -->
     <DataTemplate x:Key="NavTileTemplate">
-        <Grid Height="92" Margin="16,14">
+        <Grid MinHeight="60" Margin="16,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />

@@ -32,7 +32,7 @@ public partial class MainWindow : Window
     {
         // 最大化时窗口会超出屏幕一圈，留出边距避免内容被裁掉
         RootGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
-        MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";
+        MaxButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
         MaxButton.ToolTip = WindowState == WindowState.Maximized ? "还原" : "最大化";
     }
 
@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         UserControl page = key switch
         {
             "navigator" => new NavigatorPage(this, query),
-            "cleanup" => new ComingSoonPage("一键清理", "帮你清理临时文件、浏览器缓存、微信/QQ 缓存，让 C 盘重新变得宽敞。"),
+            "cleanup" => new CleanupPage(this),
             "shortcuts" => new ComingSoonPage("快捷键指南", "可以搜索的快捷键大全；按住 Ctrl 一秒钟，还会弹出常用快捷键的小卡片。"),
             "ai" => new ComingSoonPage("AI 问答", "填入自己的 API Key，就能用大白话问电脑问题。"),
             "settings" => new ComingSoonPage("设置", "提示卡开关、开机自启、AI 设置都在这里。"),

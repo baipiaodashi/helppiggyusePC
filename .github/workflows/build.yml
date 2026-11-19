@@ -73,3 +73,24 @@ jobs:
           git add .
           git commit -q -m "界面截图：${{ github.ref_name }} @ ${{ github.sha }}"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-screenshots
+
+      - name: 发布版本（推送 v 开头的标签时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}"
+          Copy-Item publish/PiggyHelper.exe "PiggyHelper-$v.exe"
+          Compress-Archive -Path "PiggyHelper-$v.exe" -DestinationPath "PiggyHelper-$v.zip"
+
+      - name: 上传到 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 小猪电脑助手 ${{ github.ref_name }}
+          body: |
+            下载 PiggyHelper-${{ github.ref_name }}.exe，双击就能运行，不用安装。
+            如果浏览器拦截 exe 下载，可以改下 zip 压缩包，解压后再双击运行。
+            第一次运行如果 Windows 提示"已保护你的电脑"，点"更多信息"→"仍要运行"。
+          files: |
+            PiggyHelper-${{ github.ref_name }}.exe
+            PiggyHelper-${{ github.ref_name }}.zip

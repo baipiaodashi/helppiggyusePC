@@ -3,90 +3,118 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:PiggyHelper.Controls"
         Title="小猪电脑助手" Icon="Assets/piggy.ico"
-        Width="1180" Height="780" MinWidth="900" MinHeight="620"
+        Width="1200" Height="800" MinWidth="960" MinHeight="640"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgBrush}"
         FontFamily="{StaticResource UiFont}"
         Foreground="{StaticResource TextBrush}"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display">
-    <Grid>
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0,0,0,1"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="256" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
+        <!-- ========== 背景装饰：几团柔和的光晕 ========== -->
+        <Canvas Grid.RowSpan="2" Grid.ColumnSpan="2" IsHitTestVisible="False" ClipToBounds="True">
+            <Ellipse Canvas.Right="-160" Canvas.Top="-140" Width="520" Height="520">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#80FFC9DC" Offset="0" />
+                        <GradientStop Color="#00FFC9DC" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Canvas.Left="180" Canvas.Bottom="-220" Width="560" Height="560">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#70FFE3B8" Offset="0" />
+                        <GradientStop Color="#00FFE3B8" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Canvas.Right="120" Canvas.Bottom="-120" Width="360" Height="360">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#50CFE6FF" Offset="0" />
+                        <GradientStop Color="#00CFE6FF" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+        </Canvas>
+
+        <!-- ========== 标题栏 ========== -->
+        <DockPanel Grid.ColumnSpan="2" Margin="18,0,8,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource TitleBarButton}" Content="&#xE921;" ToolTip="最小化"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMinimizeClick" />
+                <Button x:Name="MaxButton" Style="{StaticResource TitleBarButton}" Content="&#xE922;" ToolTip="最大化"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnMaximizeClick" />
+                <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" ToolTip="关闭"
+                        WindowChrome.IsHitTestVisibleInChrome="True" Click="OnCloseClick" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Source="Assets/piggy.ico" Width="20" Height="20" />
+                <TextBlock Text="小猪电脑助手" FontSize="13" FontWeight="Bold" Foreground="{StaticResource SubTextBrush}"
+                           VerticalAlignment="Center" Margin="8,0,0,0" />
+            </StackPanel>
+        </DockPanel>
+
         <!-- ========== 左侧菜单 ========== -->
-        <Border Background="{StaticResource SidebarBrush}" CornerRadius="0,32,32,0" Padding="18,24">
+        <ContentControl Grid.Row="1" Style="{StaticResource Card}" Background="{StaticResource SidebarBrush}"
+                        Margin="16,4,4,16" Padding="14,20">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,0,0,24">
-                    <controls:PiggyMascot Width="96" Height="96" />
-                    <TextBlock Text="小猪电脑助手" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"
-                               Foreground="{StaticResource PinkDarkBrush}" Margin="0,6,0,0" />
-                    <TextBlock Text="电脑不会用？问小猪！" FontSize="13" HorizontalAlignment="Center"
-                               Foreground="{StaticResource SubTextBrush}" Margin="0,4,0,0" />
+                <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,0,0,22">
+                    <controls:PiggyMascot Width="92" Height="92" />
+                    <TextBlock Text="小猪电脑助手" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                               Foreground="{StaticResource PinkDeepBrush}" Margin="0,8,0,0" />
+                    <Border Background="{StaticResource PinkSoftBrush}" CornerRadius="10" Padding="10,3" Margin="0,6,0,0"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="电脑不会用？问小猪！" FontSize="12" Foreground="{StaticResource PinkDeepBrush}" />
+                    </Border>
                 </StackPanel>
 
-                <TextBlock DockPanel.Dock="Bottom" Text="v0.1 · 第一步：主页和功能导航" FontSize="12"
-                           Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Center" TextWrapping="Wrap"
-                           TextAlignment="Center" />
+                <TextBlock x:Name="VersionText" DockPanel.Dock="Bottom" FontSize="12"
+                           Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
 
                 <StackPanel>
-                    <RadioButton x:Name="NavHome" Style="{StaticResource SideNavButton}" Tag="home" Checked="OnSideNavChecked">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE80F;" FontFamily="{StaticResource IconFont}" FontSize="20" Width="34" VerticalAlignment="Center" />
-                            <TextBlock Text="首页" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton x:Name="NavNavigator" Style="{StaticResource SideNavButton}" Tag="navigator" Checked="OnSideNavChecked">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="20" Width="34" VerticalAlignment="Center" />
-                            <TextBlock Text="功能导航" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton x:Name="NavCleanup" Style="{StaticResource SideNavButton}" Tag="cleanup" Checked="OnSideNavChecked">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="20" Width="34" VerticalAlignment="Center" />
-                            <TextBlock Text="一键清理" VerticalAlignment="Center" />
-                            <Border Background="{StaticResource PinkLightBrush}" CornerRadius="8" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="制作中" FontSize="11" Foreground="{StaticResource PinkDarkBrush}" />
-                            </Border>
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton x:Name="NavShortcuts" Style="{StaticResource SideNavButton}" Tag="shortcuts" Checked="OnSideNavChecked">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="20" Width="34" VerticalAlignment="Center" />
-                            <TextBlock Text="快捷键" VerticalAlignment="Center" />
-                            <Border Background="{StaticResource PinkLightBrush}" CornerRadius="8" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="制作中" FontSize="11" Foreground="{StaticResource PinkDarkBrush}" />
-                            </Border>
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton x:Name="NavAi" Style="{StaticResource SideNavButton}" Tag="ai" Checked="OnSideNavChecked">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8BD;" FontFamily="{StaticResource IconFont}" FontSize="20" Width="34" VerticalAlignment="Center" />
-                            <TextBlock Text="AI 问答" VerticalAlignment="Center" />
-                            <Border Background="{StaticResource PinkLightBrush}" CornerRadius="8" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="制作中" FontSize="11" Foreground="{StaticResource PinkDarkBrush}" />
-                            </Border>
-                        </StackPanel>
-                    </RadioButton>
+                    <RadioButton x:Name="NavHome" Style="{StaticResource SideNavButton}" Tag="&#xE80F;" Content="首页" Checked="OnSideNavChecked" />
+                    <RadioButton x:Name="NavNavigator" Style="{StaticResource SideNavButton}" Tag="&#xE71D;" Content="功能导航" Checked="OnSideNavChecked" />
+                    <RadioButton x:Name="NavCleanup" Style="{StaticResource SideNavButton}" Tag="&#xE74D;" Content="一键清理" Checked="OnSideNavChecked" />
+                    <RadioButton x:Name="NavShortcuts" Style="{StaticResource SideNavButton}" Tag="&#xE765;" Content="快捷键" Checked="OnSideNavChecked" />
+                    <RadioButton x:Name="NavAi" Style="{StaticResource SideNavButton}" Tag="&#xE8BD;" Content="AI 问答" Checked="OnSideNavChecked" />
+                    <RadioButton x:Name="NavSettings" Style="{StaticResource SideNavButton}" Tag="&#xE713;" Content="设置" Checked="OnSideNavChecked" />
                 </StackPanel>
             </DockPanel>
-        </Border>
+        </ContentControl>
 
         <!-- ========== 右侧内容 ========== -->
-        <ContentControl x:Name="PageHost" Grid.Column="1" Focusable="False" />
+        <ContentControl x:Name="PageHost" Grid.Row="1" Grid.Column="1" Focusable="False" />
 
         <!-- ========== 底部小提示（气泡） ========== -->
-        <Border x:Name="Toast" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                Margin="40,0,40,32" Padding="24,16" CornerRadius="22" MaxWidth="720"
-                Background="#4A3B47" Opacity="0" IsHitTestVisible="False" Visibility="Collapsed">
-            <StackPanel Orientation="Horizontal">
-                <controls:PiggyMascot Width="40" Height="40" Margin="0,0,12,0" />
-                <TextBlock x:Name="ToastText" Foreground="White" FontSize="16" TextWrapping="Wrap"
-                           VerticalAlignment="Center" MaxWidth="600" />
-            </StackPanel>
-        </Border>
+        <Grid x:Name="Toast" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+              Margin="40,0,40,28" MaxWidth="720" Opacity="0" IsHitTestVisible="False" Visibility="Collapsed">
+            <Grid.RenderTransform>
+                <TranslateTransform x:Name="ToastShift" Y="0" />
+            </Grid.RenderTransform>
+            <Border CornerRadius="24" Background="White" Effect="{StaticResource HoverShadow}" />
+            <Border CornerRadius="24" BorderBrush="{StaticResource PinkLightBrush}" BorderThickness="2" Padding="16,12,24,12">
+                <StackPanel Orientation="Horizontal">
+                    <controls:PiggyMascot Width="44" Height="44" Margin="0,0,12,0" />
+                    <TextBlock x:Name="ToastText" FontSize="15" TextWrapping="Wrap" LineHeight="22"
+                               VerticalAlignment="Center" MaxWidth="600" />
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

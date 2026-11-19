@@ -8,23 +8,52 @@ namespace PiggyHelper;
 
 public partial class MainWindow : Window
 {
-    private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(6) };
+    private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(7) };
     private bool _suppressNav;
 
     public MainWindow()
     {
         InitializeComponent();
+        VersionText.Text = "v" + App.VersionText;
         _toastTimer.Tick += (_, _) => HideToast();
+        StateChanged += (_, _) => UpdateMaximizeState();
         NavHome.IsChecked = true;
     }
+
+    // ---------- 标题栏 ----------
+    private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void OnMaximizeClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    private void UpdateMaximizeState()
+    {
+        // 最大化时窗口会超出屏幕一圈，留出边距避免内容被裁掉
+        RootGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+        MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";
+        MaxButton.ToolTip = WindowState == WindowState.Maximized ? "还原" : "最大化";
+    }
+
+    // ---------- 页面切换 ----------
+    private static string KeyOf(RadioButton rb) => rb.Name switch
+    {
+        nameof(NavNavigator) => "navigator",
+        nameof(NavCleanup) => "cleanup",
+        nameof(NavShortcuts) => "shortcuts",
+        nameof(NavAi) => "ai",
+        nameof(NavSettings) => "settings",
+        _ => "home",
+    };
 
     private void OnSideNavChecked(object sender, RoutedEventArgs e)
     {
         if (_suppressNav) return;
-        if (sender is RadioButton { Tag: string key }) ShowPage(key, null);
+        if (sender is RadioButton rb) ShowPage(KeyOf(rb), null);
     }
 
-    /// <summary>跳转到某个页面（query 用于把首页搜索词带到功能导航）。</summary>
+    /// <summary>跳转到某个页面（query 用于把搜索词带过去）。</summary>
     public void Navigate(string key, string? query = null)
     {
         _suppressNav = true;
@@ -34,6 +63,7 @@ public partial class MainWindow : Window
             "cleanup" => NavCleanup,
             "shortcuts" => NavShortcuts,
             "ai" => NavAi,
+            "settings" => NavSettings,
             _ => NavHome,
         };
         target.IsChecked = true;
@@ -46,22 +76,25 @@ public partial class MainWindow : Window
         UserControl page = key switch
         {
             "navigator" => new NavigatorPage(this, query),
-            "cleanup" => new ComingSoonPage("一键清理",
-                "帮你清理临时文件、浏览器缓存、微信/QQ 缓存，让 C 盘重新变得宽敞。聊天文件会单独列出来，由你自己决定删不删。"),
-            "shortcuts" => new ComingSoonPage("快捷键指南",
-                "可以搜索的快捷键大全；按住 Ctrl 一秒钟，还会弹出常用快捷键的小卡片。"),
-            "ai" => new ComingSoonPage("AI 问答",
-                "填入自己的 DeepSeek 或通义千问 API Key，就能用大白话问电脑问题。"),
+            "cleanup" => new ComingSoonPage("一键清理", "帮你清理临时文件、浏览器缓存、微信/QQ 缓存，让 C 盘重新变得宽敞。"),
+            "shortcuts" => new ComingSoonPage("快捷键指南", "可以搜索的快捷键大全；按住 Ctrl 一秒钟，还会弹出常用快捷键的小卡片。"),
+            "ai" => new ComingSoonPage("AI 问答", "填入自己的 API Key，就能用大白话问电脑问题。"),
+            "settings" => new ComingSoonPage("设置", "提示卡开关、开机自启、AI 设置都在这里。"),
             _ => new HomePage(this),
         };
         PageHost.Content = page;
+        page.Opacity = 0;
+        page.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(180)));
     }
 
+    // ---------- 底部气泡 ----------
     public void ShowToast(string message)
     {
         ToastText.Text = message;
         Toast.Visibility = Visibility.Visible;
         Toast.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(200)));
+        ToastShift.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
+            new DoubleAnimation(16, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.4 } });
         _toastTimer.Stop();
         _toastTimer.Start();
     }

@@ -8,6 +8,9 @@ namespace PiggyHelper;
 
 public partial class App : Application
 {
+    public static string VersionText =>
+        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+
     // 自动测试用：--screenshot 文件路径 会在界面画好后保存截图并退出
     private string? _screenshotPath;
 

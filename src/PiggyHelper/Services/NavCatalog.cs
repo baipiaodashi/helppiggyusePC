@@ -12,8 +12,13 @@ public sealed record NavItem(
     string? Args = null,
     bool Favorite = false)
 {
-    /// <summary>卡片上显示的小字说明（网站显示"官方网站"字样）。</summary>
+    /// <summary>卡片上显示的小字说明。</summary>
     public string Subtitle => Tip;
+
+    public System.Windows.Media.Brush IconBrush => Palette.For(Color).Icon;
+    public System.Windows.Media.Brush TintBrush => Palette.For(Color).Tint;
+    public System.Windows.Media.Brush SolidBrush => Palette.For(Color).Solid;
+    public System.Windows.Media.Color ShadowColor => Palette.For(Color).Shadow;
 }
 
 public static class NavCatalog

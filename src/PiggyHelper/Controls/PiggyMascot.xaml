@@ -31,6 +31,12 @@
             <!-- 脑袋 -->
             <Ellipse Canvas.Left="16" Canvas.Top="34" Width="168" Height="152"
                      Fill="#FFB3C7" Stroke="#E8799E" StrokeThickness="6" />
+            <!-- 高光 -->
+            <Ellipse Canvas.Left="40" Canvas.Top="48" Width="56" Height="30" Fill="White" Opacity="0.35">
+                <Ellipse.RenderTransform>
+                    <RotateTransform Angle="-18" CenterX="28" CenterY="15" />
+                </Ellipse.RenderTransform>
+            </Ellipse>
             <!-- 眼睛 -->
             <Ellipse Canvas.Left="60" Canvas.Top="82" Width="18" Height="22" Fill="#4A3B47" />
             <Ellipse Canvas.Left="122" Canvas.Top="82" Width="18" Height="22" Fill="#4A3B47" />

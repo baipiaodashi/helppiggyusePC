@@ -49,14 +49,12 @@ public partial class App : Application
             (int)Math.Ceiling(root.ActualWidth * dpi.DpiScaleX),
             (int)Math.Ceiling(root.ActualHeight * dpi.DpiScaleY),
             dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-        // 先铺上窗口背景色，再画界面
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
-        {
+        // 先铺上窗口背景色，再直接画界面（不缩放）
+        var bg = new DrawingVisual();
+        using (var dc = bg.RenderOpen())
             dc.DrawRectangle(window.Background, null, new Rect(0, 0, root.ActualWidth, root.ActualHeight));
-            dc.DrawRectangle(new VisualBrush(root), null, new Rect(0, 0, root.ActualWidth, root.ActualHeight));
-        }
-        bmp.Render(visual);
+        bmp.Render(bg);
+        bmp.Render(root);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bmp));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);

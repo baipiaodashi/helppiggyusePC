@@ -113,7 +113,7 @@ public static class NavCatalog
             "截图 截屏 抓图 屏幕截图 截个图", Favorite: true),
         new("任务管理器", Tools, "\uE7C4", "#FF8E8E", "taskmgr.exe",
             "软件卡死了？选中它，点“结束任务”。快捷键：Ctrl + Shift + Esc。",
-            "任务管理器 卡死 没反应 结束程序 卡住 关不掉 内存占用"),
+            "任务管理器 卡死 没反应 结束程序 卡住 关不掉 内存占用", Favorite: true),
         new("此电脑（文件）", Tools, "\uE8B7", "#FFC24B", "explorer.exe",
             "查看电脑里所有的文件和 U 盘。快捷键：Win + E。",
             "文件 文件夹 此电脑 我的电脑 资源管理器 u盘 找文件", "shell:MyComputerFolder"),

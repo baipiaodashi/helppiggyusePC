@@ -40,7 +40,10 @@ jobs:
             @{ name = "4-cleanup";   args = @("--page", "cleanup", "--auto", "scan", "--delay", "15") },
             @{ name = "5-bigfiles";  args = @("--page", "cleanup", "--auto", "big", "--delay", "10") },
             @{ name = "6-shortcuts"; args = @("--page", "shortcuts") },
-            @{ name = "7-overlay";   args = @("--page", "overlay") }
+            @{ name = "7-overlay";   args = @("--page", "overlay") },
+            @{ name = "8-ai-setup";  args = @("--page", "ai", "--auto", "setup") },
+            @{ name = "9-ai-chat";   args = @("--page", "ai", "--auto", "demo") },
+            @{ name = "10-settings"; args = @("--page", "settings") }
           )
           $failed = $false
           foreach ($c in $cases) {

@@ -99,8 +99,8 @@ public partial class MainWindow : Window
             "navigator" => new NavigatorPage(this, query),
             "cleanup" => new CleanupPage(this),
             "shortcuts" => new ShortcutsPage(this),
-            "ai" => new ComingSoonPage("AI 问答", "填入自己的 API Key，就能用大白话问电脑问题。"),
-            "settings" => new ComingSoonPage("设置", "提示卡开关、开机自启、AI 设置都在这里。"),
+            "ai" => new AiPage(this, query),
+            "settings" => new SettingsPage(this),
             _ => new HomePage(this),
         };
         PageHost.Content = page;

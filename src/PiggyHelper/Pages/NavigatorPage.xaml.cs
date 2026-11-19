@@ -64,6 +64,8 @@ public partial class NavigatorPage : UserControl
         EmptyState.Visibility = results.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void OnAskAiClick(object sender, RoutedEventArgs e) => _main.Navigate("ai", SearchInput.Text);
+
     private void OnTileClick(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is NavItem item) OpenItem(_main, item);

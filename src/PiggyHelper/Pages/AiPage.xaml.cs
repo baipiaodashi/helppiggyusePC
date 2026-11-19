@@ -34,7 +34,11 @@ public partial class AiPage : UserControl
         Loaded += (_, _) =>
         {
             if (App.AutoAction == "demo") AddDemo();
-            else if (!string.IsNullOrWhiteSpace(question) && AiService.IsConfigured) _ = SendAsync(question);
+            else if (!string.IsNullOrWhiteSpace(question))
+            {
+                if (AiService.IsConfigured) _ = SendAsync(question);
+                else Input.Text = question; // 设置好 Key 之后可以直接发送
+            }
             Input.Focus();
         };
         Unloaded += (_, _) => _cts?.Cancel();

@@ -19,6 +19,8 @@ public sealed class CleanItem : INotifyPropertyChanged
     /// <summary>清理前需要注意的事，比如"先退出微信"。</summary>
     public string? Notice { get; init; }
     public bool NeedsAdmin { get; init; }
+    /// <summary>只清理多少小时以前的文件（避免删掉别的软件正在用的临时文件）。</summary>
+    public double MinAgeHours { get; init; }
     public bool IsRecycleBin { get; init; }
     public Func<IEnumerable<string>> Roots { get; init; } = () => Array.Empty<string>();
 
@@ -182,7 +184,8 @@ public static class CleanupService
         {
             Title = "系统临时文件", Icon = "\uE8B7", Color = "#7DB7FF",
             What = "软件运行时临时放的“草稿纸”，用完以后常常忘了扔，越攒越多。",
-            Effect = "不会影响任何软件和你的文件。正在被使用的会自动跳过。",
+            Effect = "不会影响任何软件和你的文件。正在被使用的、以及最近两小时内刚生成的，都会自动跳过。",
+            MinAgeHours = 2,
             Roots = () => new[] { Path.GetTempPath(), Path.Combine(WinDir, "Temp") },
         },
         new CleanItem
@@ -287,6 +290,7 @@ public static class CleanupService
                 foreach (var f in new DirectoryInfo(root).EnumerateFiles("*", Deep))
                 {
                     ct.ThrowIfCancellationRequested();
+                    if (!ShouldTouch(item, f)) continue;
                     try { total += f.Length; } catch { }
                 }
             }
@@ -319,6 +323,7 @@ public static class CleanupService
                 ct.ThrowIfCancellationRequested();
                 // 安全检查：只删清单文件夹里面的东西
                 if (!f.FullName.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!ShouldTouch(item, f)) continue;
                 try
                 {
                     long len = f.Length;
@@ -340,12 +345,34 @@ public static class CleanupService
                 foreach (var d in dirs)
                 {
                     if (!d.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) continue;
+                    if ((d + "\\").StartsWith(DotNetExtractDir, StringComparison.OrdinalIgnoreCase)) continue;
                     try { if (!Directory.EnumerateFileSystemEntries(d).Any()) Directory.Delete(d); } catch { }
                 }
             }
             catch { }
         }
         return new CleanResult(freed, deleted, skipped);
+    }
+
+    /// <summary>
+    /// 不碰的文件：.NET 程序（包括小猪自己）解压在临时文件夹里的运行库，删了会导致软件打不开；
+    /// 以及太新的文件（可能正在被安装程序等使用）。
+    /// </summary>
+    private static readonly string DotNetExtractDir = Path.Combine(Path.GetTempPath(), ".net") + "\\";
+
+    private static bool ShouldTouch(CleanItem item, FileInfo f)
+    {
+        if (f.FullName.StartsWith(DotNetExtractDir, StringComparison.OrdinalIgnoreCase)) return false;
+        if (item.MinAgeHours > 0)
+        {
+            try
+            {
+                var newest = f.LastWriteTimeUtc > f.CreationTimeUtc ? f.LastWriteTimeUtc : f.CreationTimeUtc;
+                if ((DateTime.UtcNow - newest).TotalHours < item.MinAgeHours) return false;
+            }
+            catch { return false; }
+        }
+        return true;
     }
 
     /// <summary>去重并过滤掉不存在或看起来不安全的路径（比如整个盘、用户主目录）。</summary>

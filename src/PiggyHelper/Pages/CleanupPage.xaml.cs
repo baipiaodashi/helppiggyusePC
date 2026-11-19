@@ -22,6 +22,7 @@ public partial class CleanupPage : UserControl
         _main = main;
         InitializeComponent();
         ItemsList.ItemsSource = _items;
+        foreach (var item in _items) item.PropertyChanged += OnItemChanged;
         BigList.ItemsSource = _bigFiles;
 
         if (!CleanupService.IsAdmin())
@@ -113,7 +114,6 @@ public partial class CleanupPage : UserControl
         _scanned = true;
         ActionButton.Content = total > 0 ? $"一键清理 {Format.Bytes(total)}" : "重新扫描";
         if (total == 0) _scanned = false;
-        foreach (var item in _items) item.PropertyChanged += OnItemChanged;
     }
 
     private void OnItemChanged(object? sender, PropertyChangedEventArgs e)

@@ -1,0 +1,60 @@
+name: 打包 exe
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: 打包成单个 exe
+        run: >
+          dotnet publish src/PiggyHelper/PiggyHelper.csproj -c Release -r win-x64
+          --self-contained true -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+          -o publish
+
+      - name: 启动测试并截图
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          $cases = @(
+            @{ name = "home";      args = @("--page", "home") },
+            @{ name = "navigator"; args = @("--page", "navigator") },
+            @{ name = "search";    args = @("--page", "navigator", "--query", "怎么调声音") },
+            @{ name = "cleanup";   args = @("--page", "cleanup") }
+          )
+          $failed = $false
+          foreach ($c in $cases) {
+            $out = Join-Path $PWD "screenshots/$($c.name).png"
+            $p = Start-Process publish/PiggyHelper.exe -ArgumentList ($c.args + @("--screenshot", "`"$out`"")) -PassThru
+            $null = $p.Handle  # 保证之后能读到退出码
+            if (-not $p.WaitForExit(60000)) { $p.Kill(); Write-Host "$($c.name): 超时"; $failed = $true; continue }
+            if ($p.ExitCode -ne 0 -or -not (Test-Path $out)) {
+              Write-Host "$($c.name): 失败，退出码 $($p.ExitCode)"
+              if (Test-Path "$out.error.txt") { Get-Content "$out.error.txt" }
+              $failed = $true
+            } else { Write-Host "$($c.name): OK" }
+          }
+          if ($failed) { exit 1 }
+
+      - name: 上传 exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: PiggyHelper-exe
+          path: publish/PiggyHelper.exe
+
+      - name: 上传截图
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/

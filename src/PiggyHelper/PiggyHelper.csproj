@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 允许在非 Windows 系统上编译检查 -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>PiggyHelper</AssemblyName>
+    <RootNamespace>PiggyHelper</RootNamespace>
+    <Product>小猪电脑助手</Product>
+    <AssemblyTitle>小猪电脑助手</AssemblyTitle>
+    <Version>0.1.0</Version>
+    <ApplicationIcon>Assets\piggy.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\piggy.ico" />
+  </ItemGroup>
+
+</Project>

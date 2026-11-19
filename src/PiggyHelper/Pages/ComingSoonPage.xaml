@@ -1,0 +1,18 @@
+<UserControl x:Class="PiggyHelper.Pages.ComingSoonPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PiggyHelper.Controls">
+    <Grid Margin="40">
+        <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                MaxWidth="560" Padding="40,36">
+            <StackPanel>
+                <controls:PiggyMascot Width="150" Height="150" />
+                <TextBlock x:Name="FeatureTitle" Style="{StaticResource PageTitle}" HorizontalAlignment="Center" Margin="0,16,0,0" />
+                <TextBlock Text="小猪正在努力制作这个功能，很快就来！" FontSize="17" HorizontalAlignment="Center"
+                           Foreground="{StaticResource PinkDarkBrush}" Margin="0,10,0,0" />
+                <TextBlock x:Name="FeatureDesc" Style="{StaticResource PageSubtitle}" TextAlignment="Center"
+                           Margin="0,16,0,0" LineHeight="24" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

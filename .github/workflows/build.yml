@@ -60,7 +60,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           Write-Host ("引擎压缩包大小：{0:N0} MB" -f ((Get-Item PiggyHarness-win-x64.zip).Length / 1MB))
 
-      - name: 高级模式自检（用假的 AI 接口走一遍：先问再做、危险命令拦下、拒绝就不做）
+      - name: 高级模式自检（用假的 AI 接口走一遍原版 Harness：直接执行、沙盒挡住外面、申请权限时同意才做）
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force screenshots | Out-Null

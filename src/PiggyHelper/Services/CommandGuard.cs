@@ -16,8 +16,8 @@ public enum CommandRisk
 public sealed record GuardResult(CommandRisk Risk, string Reason);
 
 /// <summary>
-/// 高级模式的"安全闸门"：AI 想运行的每条命令都要先过这里。
-/// 宁可多拦，不能漏拦——用户是电脑小白，看不懂命令。
+/// 给 AI 想运行的命令判断风险，用来在卡片上提醒（高级模式只提醒、不拦）。
+/// 宁可多提醒，不能漏提醒——用户是电脑小白，看不懂命令。
 /// </summary>
 public static class CommandGuard
 {

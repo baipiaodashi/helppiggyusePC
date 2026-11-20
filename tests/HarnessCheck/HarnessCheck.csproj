@@ -11,6 +11,5 @@
     <Compile Include="..\..\src\PiggyHelper\Services\CommandGuard.cs" Link="Linked\CommandGuard.cs" />
     <Compile Include="..\..\src\PiggyHelper\Services\AiTypes.cs" Link="Linked\AiTypes.cs" />
     <Compile Include="..\..\src\PiggyHelper\Services\Harness\*.cs" Link="Linked\Harness\%(Filename)%(Extension)" />
-    <EmbeddedResource Include="..\..\harness\piggy-gate\index.js" LogicalName="piggy-gate.js" />
   </ItemGroup>
 </Project>

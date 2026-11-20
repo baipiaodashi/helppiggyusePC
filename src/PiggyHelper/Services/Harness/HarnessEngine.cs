@@ -25,7 +25,7 @@ public static class HarnessEngine
     /// <summary>下载后解压到这里。</summary>
     public static string InstallDir => Path.Combine(AppData, "harness");
 
-    /// <summary>Harness 自己的数据目录（DSH_HOME）：配置、会话记录、闸门插件。</summary>
+    /// <summary>Harness 自己的数据目录（DSH_HOME）：配置、会话记录。</summary>
     public static string HomeDir => Path.Combine(AppData, "dsh-home");
 
     /// <summary>
@@ -190,32 +190,26 @@ public static class HarnessEngine
         return (url, model, ctx, max);
     }
 
-    // ---------- DSH_HOME：配置和闸门插件 ----------
+    // ---------- DSH_HOME：配置 ----------
 
     /// <summary>
-    /// 每次启动前重写一遍配置和闸门插件（防止被改动）。
+    /// 每次启动前重写一遍配置。高级模式按 Harness 原本的方式运行，小猪不加额外的限制。
     /// provider 用 OpenAI 兼容接口；API Key 不写进文件，只通过环境变量传给引擎。
     /// </summary>
     public static void PrepareHome(string baseUrl, string model, int contextWindow = 65536, int maxTokens = 8192)
     {
         Directory.CreateDirectory(HomeDir);
         Directory.CreateDirectory(WorkspaceDir);
-        var gateDir = Path.Combine(HomeDir, "node_modules", "piggy-gate");
-        Directory.CreateDirectory(gateDir);
-        File.WriteAllText(Path.Combine(gateDir, "package.json"),
-            "{ \"name\": \"piggy-gate\", \"version\": \"1.0.0\", \"type\": \"module\", \"main\": \"index.js\" }\n");
-        File.WriteAllText(Path.Combine(gateDir, "index.js"), GateSource(), new UTF8Encoding(false));
+        // 以前版本装过的"安全闸门"插件，删掉
+        try
+        {
+            var oldGate = Path.Combine(HomeDir, "node_modules", "piggy-gate");
+            if (Directory.Exists(oldGate)) Directory.Delete(oldGate, true);
+            var marker = Path.Combine(HomeDir, "piggy-gate.ready");
+            if (File.Exists(marker)) File.Delete(marker);
+        }
+        catch { }
         File.WriteAllText(Path.Combine(HomeDir, "cordis.patch.yml"), PatchYaml(baseUrl, model, contextWindow, maxTokens), new UTF8Encoding(false));
-    }
-
-    public static string GateMarkerPath => Path.Combine(HomeDir, "piggy-gate.ready");
-
-    private static string GateSource()
-    {
-        using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("piggy-gate.js")
-                      ?? throw new InvalidOperationException("缺少闸门插件");
-        using var r = new StreamReader(s, Encoding.UTF8);
-        return r.ReadToEnd();
     }
 
     private static string Q(string s) => "'" + s.Replace("'", "''") + "'";
@@ -247,14 +241,11 @@ public static class HarnessEngine
         sb.AppendLine("- id: system-prompt");
         sb.AppendLine("  config:");
         sb.AppendLine($"    personaPrefix: {Q(Persona)}");
-        // 关掉：遥测上报、远程访问、账号登录、子代理、后台任务、技能、计划模式等用不到的部分
+        // 只关掉：遥测上报、远程访问，以及要登录 DeepSeek 账号才能用的部分（小猪用的是 API Key）
         foreach (var id in new[]
         {
             "session-telemetry-otel", "otel", "remote-access", "typert-gateway", "deepseek-account", "llm-deepseek-account",
-            "web-search-deepseek", "web-deepseek-api", "subagent", "agent-team", "tool-agent-team", "subagent-spawn-in-process",
-            "subagent-fork-in-process", "tool-subagent-control", "tool-subagent", "tool-subagent-fork", "ptc-runtime", "workflow-ptc",
-            "tool-workflow", "goal", "goal-round-driver", "command-goal", "tool-goal", "jobs", "tool-jobs", "skill",
-            "skill-filesystem", "tool-skill", "plan-mode",
+            "web-search-deepseek", "web-deepseek-api",
         })
         {
             sb.AppendLine($"- id: {id}");
@@ -268,22 +259,12 @@ public static class HarnessEngine
             sb.AppendLine("  config:");
             sb.AppendLine($"    pwshPath: {Q(pwsh)}");
         }
-        sb.AppendLine("- insert:");
-        sb.AppendLine("    - id: piggy-gate");
-        sb.AppendLine("      name: 'piggy-gate'");
         return sb.ToString();
     }
 
     private const string Persona =
-        "You are Piggy (小猪), a patient and friendly computer helper inside the Piggy Helper app, powered by the {{model}} model. " +
-        "The user is a student who is new to computers, using Windows 10 or 11. Always reply in simple, warm Chinese, short and step by step. " +
-        "You can use tools to look at and operate this computer, but EVERY tool call is shown to the user as a card and runs only after the user clicks allow. " +
-        "Before each tool call, say in one plain sentence what you are about to do and why. Prefer read-only commands; do one small step at a time. " +
-        "When you run a PowerShell command, always fill the description with a short plain Chinese explanation. " +
-        "Never try to: format or partition disks, delete or modify system files (C:\\Windows, Program Files), edit the registry, disable antivirus or the firewall, " +
-        "download and run programs, add users, change permissions, or run anything as administrator. Piggy blocks these automatically. " +
-        "If the user refuses an action, do not retry it or look for a workaround; explain what they can do themselves instead. " +
-        "Commands must finish within 60 seconds and must not wait for input. " +
-        "Your working folder is the user's own home folder (Desktop, Documents, Downloads, Pictures are inside it); you can only change files there. " +
-        "When deleting the user's files, move them to the Recycle Bin instead of deleting permanently.";
+        "You are Piggy (小猪), a friendly computer helper inside the Piggy Helper app, powered by the {{model}} model. " +
+        "The user is a student who is new to computers, using Windows 10 or 11. Reply in simple, warm Chinese. " +
+        "When you run a PowerShell command, fill the description with a short plain Chinese explanation, because the user sees it on a card. " +
+        "Your working folder is the user's home folder (Desktop, Documents, Downloads, Pictures are inside it).";
 }

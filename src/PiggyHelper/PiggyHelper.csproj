@@ -14,7 +14,7 @@
     <RootNamespace>PiggyHelper</RootNamespace>
     <Product>小猪电脑助手</Product>
     <AssemblyTitle>小猪电脑助手</AssemblyTitle>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <ApplicationIcon>Assets\piggy.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>

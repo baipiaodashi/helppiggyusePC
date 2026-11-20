@@ -81,6 +81,13 @@ public partial class ClipboardPanel : Window
         };
         PreviewKeyDown += OnPreviewKeyDown;
         _store.Changed += OnStoreChanged;
+        // 在搜索框里按了 Alt+F4 之类：只收起，不真的关掉（关掉以后就再也打不开了）
+        Closing += (_, e) =>
+        {
+            if (App.IsExiting) return;
+            e.Cancel = true;
+            HidePanel();
+        };
     }
 
     // ---------- 打开 / 收起 ----------

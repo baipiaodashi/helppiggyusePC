@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using PiggyHelper.Services;
+using PiggyHelper.Services.Clips;
 using PiggyHelper.Windows;
 
 namespace PiggyHelper;
@@ -24,11 +25,14 @@ public partial class App : Application
     private HoldDetector? _hold;
     private ShortcutOverlay? _overlay;
     private MainWindow? _main;
+    private ClipboardFeature? _clipboard;
 
     // 自动测试用：--screenshot 文件路径 会在界面画好后保存截图并退出
     private string? _screenshotPath;
     // 自动测试用：--harness-selftest 报告路径 会用假的 AI 接口把高级模式走一遍
     private string? _selfTestReport;
+    // 自动测试用：--clipboard-selftest 报告路径 会真的往剪贴板里放东西，看小猪剪贴板记得对不对
+    private string? _clipTestReport;
     private double _screenshotDelay = 3;
 
     // ---------- 只允许开一个小猪 ----------
@@ -68,7 +72,15 @@ public partial class App : Application
                     _screenshotDelay = double.Parse(next, System.Globalization.CultureInfo.InvariantCulture); break;
                 case "--minimized": minimized = true; break;
                 case "--harness-selftest": _selfTestReport = next; break;
+                case "--clipboard-selftest": _clipTestReport = next; break;
             }
+        }
+
+        if (_clipTestReport != null)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            RunClipboardSelfTest(_clipTestReport);
+            return;
         }
 
         if (_selfTestReport != null)
@@ -101,6 +113,13 @@ public partial class App : Application
             _hold.HoldStarted += mod => _overlay.ShowFor(mod);
             _hold.HoldEnded += () => _overlay.HideCard();
             _hold.Start();
+
+            try
+            {
+                _clipboard = new ClipboardFeature();
+                _clipboard.Start();
+            }
+            catch (Exception ex) { ClipLog.Error("启动小猪剪贴板", ex); }
         }
 
         _main = new MainWindow();
@@ -150,6 +169,18 @@ public partial class App : Application
         Shutdown(code);
     }
 
+    private async void RunClipboardSelfTest(string report)
+    {
+        int code;
+        try { code = await ClipboardSelfTest.RunAsync(report); }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(report, "\nFAIL crashed: " + ex); } catch { }
+            code = 3;
+        }
+        Shutdown(code);
+    }
+
     /// <summary>别的小猪进程想启动时，会通过这个信号让我们把窗口叫出来。</summary>
     private void StartShowListener()
     {
@@ -183,6 +214,7 @@ public partial class App : Application
     {
         IsExiting = true;
         try { _main?.ShutdownAgents(); } catch { }
+        try { _clipboard?.Stop(); } catch { }
         _hold?.Dispose();
         Tray?.Dispose();
         ReleaseSingleInstance();
@@ -215,9 +247,9 @@ public partial class App : Application
 
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        if (_selfTestReport != null)
+        if (_selfTestReport != null || _clipTestReport != null)
         {
-            try { File.AppendAllText(_selfTestReport, "\nFAIL unhandled: " + e.Exception); } catch { }
+            try { File.AppendAllText((_selfTestReport ?? _clipTestReport)!, "\nFAIL unhandled: " + e.Exception); } catch { }
             e.Handled = true;
             Shutdown(4);
             return;

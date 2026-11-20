@@ -7,6 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\PiggyHelper\Services\CommandGuard.cs" Link="CommandGuard.cs" />
+    <Compile Include="..\..\src\PiggyHelper\Services\Clips\ClipItem.cs" Link="Clips\ClipItem.cs" />
+    <Compile Include="..\..\src\PiggyHelper\Services\Clips\ClipText.cs" Link="Clips\ClipText.cs" />
+    <Compile Include="..\..\src\PiggyHelper\Services\Clips\SensitiveDetector.cs" Link="Clips\SensitiveDetector.cs" />
+    <Compile Include="..\..\src\PiggyHelper\Services\Clips\ClipHistory.cs" Link="Clips\ClipHistory.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

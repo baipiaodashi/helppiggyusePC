@@ -25,6 +25,22 @@ public sealed class AppSettings
 
     /// <summary>AI 动手的方式："safe" = 安全助手（默认），"advanced" = 高级模式（DeepSeek Harness）。</summary>
     public string AgentMode { get; set; } = "safe";
+
+    // ---------- 小猪剪贴板 ----------
+    /// <summary>记录复制过的东西。</summary>
+    public bool ClipboardEnabled { get; set; } = true;
+    /// <summary>按 Win+V 打开小猪剪贴板（代替 Windows 自带的剪贴板历史）。</summary>
+    public bool ClipboardWinV { get; set; } = true;
+    /// <summary>最多留几条（收藏的不算）：100 / 300 / 1000。</summary>
+    public int ClipboardMaxItems { get; set; } = 300;
+    /// <summary>留几天：1 / 7 / 30，0 = 一直留着。</summary>
+    public int ClipboardKeepDays { get; set; } = 30;
+    /// <summary>像密码、身份证号的内容干脆不记（默认是记下来但打码、加密保存）。</summary>
+    public bool ClipboardSkipSensitive { get; set; }
+    /// <summary>从这些软件复制的东西不记（exe 文件名）。修改时整个换掉，不要原地改。</summary>
+    public List<string> ClipboardIgnoreApps { get; set; } = new(DefaultIgnoreApps);
+
+    public static readonly string[] DefaultIgnoreApps = { "KeePass.exe", "KeePassXC.exe", "1Password.exe", "Bitwarden.exe", "Enpass.exe" };
 }
 
 public static class SettingsService
@@ -53,8 +69,11 @@ public static class SettingsService
     {
         try
         {
+            // 先写到临时文件再替换，写到一半断电也不会把设置弄坏
             Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(Current, Json));
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(Current, Json));
+            File.Move(tmp, FilePath, true);
         }
         catch { }
         Changed?.Invoke();

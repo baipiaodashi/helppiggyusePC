@@ -70,6 +70,14 @@ P["search"]= base("dot","o")+arm(58,158,84,178)+glass+arm(178,156,188,176)
 key=(f'<rect x="150" y="46" width="70" height="56" rx="12" fill="#E9E1F5" {S()}/><rect x="150" y="46" width="70" height="48" rx="12" fill="#fff" {S()}/>'
      f'<text x="185" y="80" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="22" text-anchor="middle" fill="{INK}">Ctrl</text>')
 P["key"]= base("happy","open")+arm(58,158,84,178)+key+arm(184,140,190,104)+spark(36,60,.9)
+# 9 抱着剪贴板（剪贴板历史）：夹子 + 一张写了字的小纸
+clipboard=(f'<g transform="rotate(12 184 88)">'
+           f'<rect x="150" y="40" width="68" height="90" rx="13" fill="#F7C873" {S()}/>'
+           f'<rect x="160" y="55" width="48" height="64" rx="7" fill="#fff" {S("stroke-width=\'4\'")}/>'
+           f'<rect x="170" y="31" width="28" height="17" rx="7" fill="#FF7EA8" {S()}/>'
+           f'<path d="M 168 74 L 200 74 M 168 88 L 200 88 M 168 102 L 188 102" fill="none" stroke="#F5A3AE" stroke-width="5" stroke-linecap="round"/>'
+           f'</g>')
+P["clip"]= base("happy","smile")+arm(58,158,84,178)+clipboard+arm(186,156,172,126)+spark(38,60,.9)+spark(222,152,.6,"#7EC8FF")
 # 7 只有脑袋（头像 / 图标）
 P["face"]= ears()+f'<path d="M 48 128 C 46 76, 82 46, 120 46 C 158 46, 194 76, 192 128 C 194 170, 160 188, 120 188 C 80 188, 46 170, 48 128 Z" fill="{SKIN}" {S()}/>'+'<ellipse cx="88" cy="70" rx="17" ry="8" fill="#fff" opacity=".45" transform="rotate(-28 88 70)"/>'+tuft()+face()
 # 8 睡觉（空状态 / 没东西）

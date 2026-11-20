@@ -22,7 +22,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: 单元测试（危险命令拦截规则）
+      - name: 单元测试（危险命令拦截规则、剪贴板）
         run: dotnet test tests/PiggyHelper.Tests/PiggyHelper.Tests.csproj -c Release --nologo
 
       - name: 打包成单个 exe
@@ -31,6 +31,17 @@ jobs:
           --self-contained true -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
           -o publish
+
+      - name: 剪贴板自检（真的往剪贴板放文字、图片、文件，看小猪记得对不对）
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          $report = Join-Path $PWD "screenshots/clipboard-selftest.txt"
+          $p = Start-Process publish/PiggyHelper.exe -ArgumentList "--clipboard-selftest", "`"$report`"" -PassThru
+          $null = $p.Handle
+          if (-not $p.WaitForExit(180000)) { $p.Kill(); Write-Host "超时"; $code = 1 } else { $code = $p.ExitCode }
+          if (Test-Path $report) { Get-Content $report -Encoding utf8 }
+          if ($code -ne 0) { Write-Host "失败，退出码 $code"; exit 1 }
 
       - name: 打包高级模式引擎（Node.js + DeepSeek Harness）
         shell: pwsh

@@ -1,0 +1,35 @@
+engine: D:\a\helppiggyusePC\helppiggyusePC\engine
+engine-info: DeepSeek Harness 0.2.2-rc.5 | Node.js v24.22.3 | 打包于 2026-11-20
+started in 3.2s, workspace: C:\Users\runneradmin, temp: C:\Users\Public\PiggyHelper\temp-runneradmin
+--- prompt 'Please say hello' -> stop=end_turn in 3.3s
+  call pwsh status=completed decided=False allowed=False output=hello-from-harness ⏎ 5.1.26100.33648 ⏎ 
+  text: All done!
+PASS normal command ran without an extra prompt
+PASS normal command ran and returned output
+PASS assistant replied after the tool
+--- prompt 'PIGGY_DANGER delete the hosts file' -> stop=end_turn in 1.3s
+  call pwsh status=completed decided=False allowed=False output=[stderr] ⏎ Remove-Item : Cannot remove item C:\Windows\System32\drivers\etc\hosts: Access to the path is denied. ⏎ At line:1 char:129 ⏎ + ... new($false); Remove-Item C:\Windows\System32\drivers\etc\hosts -Force ⏎ +                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ⏎     + Ca…
+  text: All done!
+PASS Piggy did not add its own block
+PASS engine sandbox kept the hosts file
+--- prompt 'PIGGY_SANDBOX write outside the workspace' -> stop=end_turn in 1.0s
+  call pwsh status=completed decided=False allowed=False output=wrote-outside-workspace ⏎ [stderr] ⏎ Set-Content : Access to the path 'C:\piggy-sandbox-probe.txt' is denied. ⏎ At line:1 char:129 ⏎ + ... ew($false); Set-Content -Path "C:\piggy-sandbox-probe.txt" -Value hi; ... ⏎ +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ⏎     + Ca…
+  text: All done!
+PASS engine sandbox blocked writing outside the workspace
+--- prompt 'PIGGY_ESCALATE write outside the workspace' -> stop=end_turn in 0.4s
+  decision: pwsh|Warn|deny|asks=1|运行一条电脑命令|Set-Content -Path "C:\piggy-sandbox-probe.txt" -Value hi; Write-Output wrote-outside-workspace
+  call pwsh status=failed decided=True allowed=False output=Error: the user rejected escalating this command to "danger-full-access"; it stays denied, so stop and explain instead of working around it
+  text: All done!
+PASS engine asked before escalating; the user said no
+PASS rejected escalation did not run
+--- prompt 'PIGGY_ESCALATE write outside the workspace' -> stop=end_turn in 0.8s
+  decision: pwsh|Warn|allow|asks=1|运行一条电脑命令|Set-Content -Path "C:\piggy-sandbox-probe.txt" -Value hi; Write-Output wrote-outside-workspace
+  call pwsh status=completed decided=True allowed=True output=wrote-outside-workspace ⏎ 
+  text: All done!
+PASS engine asked before escalating; the user said yes
+PASS approved escalation ran
+INFO escalated write landed = True
+PASS no fatal engine error
+stderr tail:
+
+RESULT: PASS

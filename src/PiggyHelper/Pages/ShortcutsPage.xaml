@@ -1,0 +1,98 @@
+<UserControl x:Class="PiggyHelper.Pages.ShortcutsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PiggyHelper.Controls">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+    <Grid Margin="20,4,20,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="4,8,16,0">
+            <TextBlock Text="快捷键指南" Style="{StaticResource PageTitle}" />
+            <TextBlock Text="学会几个快捷键，用电脑快一倍。不用死记，按住 Ctrl 一秒钟，小猪会提醒你。" Style="{StaticResource PageSubtitle}" />
+        </StackPanel>
+
+        <!-- 按住提示卡开关 -->
+        <ContentControl Grid.Row="1" Style="{StaticResource Card}" Background="#E4F0FF" Padding="22,18" Margin="0,18,16,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <controls:PiggyMascot Width="84" Height="84" Margin="-6,-10,12,-10" Pose="key" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="按住提示卡" FontSize="17" FontWeight="Bold" />
+                    <TextBlock Text="在任何地方按住 Ctrl、Alt 或 Win 键一秒钟，屏幕下方就会弹出可以搭配的快捷键，松开就消失。"
+                               FontSize="13" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="20" />
+                </StackPanel>
+                <Button Grid.Column="2" Style="{StaticResource GhostButton}" Content="试一试" Foreground="#3B7FD9" BorderBrush="#BFD8FA"
+                        Margin="16,0,16,0" VerticalAlignment="Center" Click="OnTryClick" />
+                <CheckBox x:Name="PopupSwitch" Grid.Column="3" Style="{StaticResource ToggleSwitch}" VerticalAlignment="Center"
+                          Checked="OnSwitchChanged" Unchecked="OnSwitchChanged" />
+            </Grid>
+        </ContentControl>
+
+        <TextBox x:Name="SearchInput" Grid.Row="2" Style="{StaticResource SearchBox}" Margin="0,20,16,18"
+                 Tag="搜一搜：复制、截图、切换窗口、Ctrl……" TextChanged="OnSearchChanged" />
+
+        <ItemsControl x:Name="CategoryBar" Grid.Row="3" Focusable="False" Margin="0,0,0,8">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <RadioButton Style="{StaticResource CategoryPill}" GroupName="ShortcutCat" Content="{Binding}" Checked="OnCategoryChecked" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="0,6,16,36">
+                <ItemsControl x:Name="ResultList" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:AdaptiveGrid MinItemWidth="300" Spacing="16" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl Style="{StaticResource Card}" Padding="18,16">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Right" Background="{StaticResource PinkSoftBrush}" CornerRadius="9" Padding="8,2"
+                                                VerticalAlignment="Center" Visibility="{Binding Popular, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="常用" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PinkDeepBrush}" />
+                                        </Border>
+                                        <ItemsControl ItemsSource="{Binding Tokens}" Focusable="False" HorizontalAlignment="Left"
+                                                      ItemsPanel="{StaticResource HorizontalPanel}" ItemTemplate="{StaticResource KeyTokenTemplate}" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding Desc}" FontSize="16" FontWeight="Bold" Margin="0,12,0,0" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Tip}" FontSize="13" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap"
+                                               Margin="0,4,0,0" LineHeight="19" Visibility="{Binding HasTip, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                            </ContentControl>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" Margin="0,40,0,0" Visibility="Collapsed">
+                    <controls:PiggyMascot Width="130" Height="130" Pose="search" />
+                    <TextBlock Text="没找到相关的快捷键" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                    <TextBlock Text="换个词试试，比如&#x201C;复制&#x201D;&#x201C;截图&#x201D;&#x201C;窗口&#x201D;。" FontSize="14"
+                               Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

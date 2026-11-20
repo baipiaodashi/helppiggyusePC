@@ -1,0 +1,46 @@
+<UserControl x:Class="PiggyHelper.Controls.AiSetupPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="第 1 步：选一家 AI 服务" FontSize="15" FontWeight="Bold" />
+        <ItemsControl x:Name="ProviderBar" Focusable="False" Margin="0,10,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <RadioButton Style="{StaticResource CategoryPill}" GroupName="AiProvider" Content="{Binding Name}" Tag="{Binding Id}"
+                                 Checked="OnProviderChecked" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock x:Name="ProviderIntro" FontSize="13" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" />
+
+        <StackPanel x:Name="CustomPanel" Visibility="Collapsed" Margin="0,12,0,0">
+            <TextBox x:Name="CustomUrl" Style="{StaticResource InputBox}" Tag="接口地址，比如 https://api.example.com/v1" />
+            <TextBox x:Name="CustomModel" Style="{StaticResource InputBox}" Tag="模型名称，比如 gpt-4o-mini" Margin="0,10,0,0" />
+        </StackPanel>
+
+        <TextBlock Text="第 2 步：领取 API Key" FontSize="15" FontWeight="Bold" Margin="0,22,0,0" />
+        <TextBlock FontSize="13" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="20"
+                   Text="API Key 就像 AI 服务的&#x201C;钥匙&#x201D;。点下面的按钮打开官网，注册登录后找到&#x201C;API Key&#x201D;页面，点&#x201C;创建&#x201D;，把那串以 sk- 开头的字符复制下来。" />
+        <Button x:Name="KeyLinkButton" Style="{StaticResource GhostButton}" Content="去官网领取 Key →" HorizontalAlignment="Left"
+                Margin="0,10,0,0" Click="OnKeyLinkClick" />
+
+        <TextBlock Text="第 3 步：粘贴 Key" FontSize="15" FontWeight="Bold" Margin="0,22,0,0" />
+        <Grid Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <PasswordBox x:Name="KeyBox" Style="{StaticResource SecretBox}" />
+            <Button x:Name="SaveButton" Grid.Column="1" Style="{StaticResource PillButton}" Content="保存并测试" Margin="12,0,0,0"
+                    Click="OnSaveClick" />
+        </Grid>
+        <TextBlock x:Name="StatusText" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Margin="0,10,0,0" />
+        <TextBlock FontSize="12" Foreground="{StaticResource FaintTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0"
+                   Text="&#x1F512; Key 只加密保存在你这台电脑上，小猪不会把它上传到任何地方。使用 AI 产生的费用由对应的平台收取。" />
+    </StackPanel>
+</UserControl>

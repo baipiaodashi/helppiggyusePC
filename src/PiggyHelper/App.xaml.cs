@@ -27,6 +27,8 @@ public partial class App : Application
 
     // 自动测试用：--screenshot 文件路径 会在界面画好后保存截图并退出
     private string? _screenshotPath;
+    // 自动测试用：--harness-selftest 报告路径 会用假的 AI 接口把高级模式走一遍
+    private string? _selfTestReport;
     private double _screenshotDelay = 3;
 
     // ---------- 只允许开一个小猪 ----------
@@ -65,7 +67,15 @@ public partial class App : Application
                 case "--delay" when next != null:
                     _screenshotDelay = double.Parse(next, System.Globalization.CultureInfo.InvariantCulture); break;
                 case "--minimized": minimized = true; break;
+                case "--harness-selftest": _selfTestReport = next; break;
             }
+        }
+
+        if (_selfTestReport != null)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            RunHarnessSelfTest(_selfTestReport);
+            return;
         }
 
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -122,6 +132,24 @@ public partial class App : Application
         }
     }
 
+    private async void RunHarnessSelfTest(string report)
+    {
+        int code;
+        try
+        {
+            var url = Environment.GetEnvironmentVariable("PIGGY_FAKE_LLM");
+            code = string.IsNullOrWhiteSpace(url)
+                ? await Services.Harness.HarnessSelfTest.RunAsync(report)
+                : await Services.Harness.HarnessSelfTest.RunAsync(report, url);
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(report, "\nFAIL crashed: " + ex); } catch { }
+            code = 3;
+        }
+        Shutdown(code);
+    }
+
     /// <summary>别的小猪进程想启动时，会通过这个信号让我们把窗口叫出来。</summary>
     private void StartShowListener()
     {
@@ -154,6 +182,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         IsExiting = true;
+        try { _main?.ShutdownAgents(); } catch { }
         _hold?.Dispose();
         Tray?.Dispose();
         ReleaseSingleInstance();
@@ -186,6 +215,13 @@ public partial class App : Application
 
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        if (_selfTestReport != null)
+        {
+            try { File.AppendAllText(_selfTestReport, "\nFAIL unhandled: " + e.Exception); } catch { }
+            e.Handled = true;
+            Shutdown(4);
+            return;
+        }
         if (_screenshotPath != null)
         {
             // 自动测试时不弹窗，直接报错退出

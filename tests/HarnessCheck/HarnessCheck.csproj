@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 在 Linux 上也能跑的高级模式自检（和小猪用的是同一套对接代码） -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HarnessCheck</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\PiggyHelper\Services\CommandGuard.cs" Link="Linked\CommandGuard.cs" />
+    <Compile Include="..\..\src\PiggyHelper\Services\AiTypes.cs" Link="Linked\AiTypes.cs" />
+    <Compile Include="..\..\src\PiggyHelper\Services\Harness\*.cs" Link="Linked\Harness\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\harness\piggy-gate\index.js" LogicalName="piggy-gate.js" />
+  </ItemGroup>
+</Project>

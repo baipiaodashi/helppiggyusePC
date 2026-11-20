@@ -1,0 +1,8 @@
+{
+  "name": "piggy-harness-engine",
+  "private": true,
+  "description": "DeepSeek Harness engine bundled by Piggy Helper (advanced mode)",
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.2.2-rc.5"
+  }
+}

@@ -4,12 +4,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace PiggyHelper.Services;
-
-/// <summary>一家 AI 服务（都兼容 OpenAI 的接口格式）。</summary>
-public sealed record AiProvider(string Id, string Name, string Url, string Model, string KeyUrl, string Intro);
 
 public sealed record ChatMessage(string Role, string Content);
 
@@ -80,8 +78,22 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
         return (text.TrimEnd(), actions);
     }
 
-    /// <summary>以"流式"的方式提问：AI 每写出一点就回调一次 onDelta，像打字一样显示出来。</summary>
+    /// <summary>以"流式"的方式提问（普通聊天）：AI 每写出一点就回调一次 onDelta，像打字一样显示出来。</summary>
     public static async Task<string> AskAsync(IReadOnlyList<ChatMessage> history, Action<string> onDelta, CancellationToken ct,
+        AiProvider? provider = null, string? apiKey = null)
+    {
+        var messages = new JsonArray { new JsonObject { ["role"] = "system", ["content"] = SystemPrompt() } };
+        foreach (var m in history) messages.Add(new JsonObject { ["role"] = m.Role, ["content"] = m.Content });
+        var r = await ChatRoundAsync(messages, null, onDelta, ct, provider, apiKey);
+        if (r.Text.Length == 0) throw new AiException("AI 没有返回内容，换个问法再试试。");
+        return r.Text;
+    }
+
+    /// <summary>
+    /// 问 AI 一轮（可以带工具）。AI 可能直接回答，也可能要求调用工具（ToolCalls 不为空）。
+    /// messages 是 OpenAI 格式的消息列表；tools 为 null 时就是普通聊天。
+    /// </summary>
+    public static async Task<RoundResult> ChatRoundAsync(JsonArray messages, JsonArray? tools, Action<string> onDelta, CancellationToken ct,
         AiProvider? provider = null, string? apiKey = null)
     {
         provider ??= CurrentProvider;
@@ -90,19 +102,24 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
         if (string.IsNullOrEmpty(provider.Url) || string.IsNullOrEmpty(provider.Model))
             throw new AiException("自定义的接口地址或模型名还没填。");
 
-        var messages = new List<object> { new { role = "system", content = SystemPrompt() } };
-        messages.AddRange(history.Select(m => (object)new { role = m.Role, content = m.Content }));
-        var body = JsonSerializer.Serialize(new { model = provider.Model, messages, stream = true, temperature = 0.7 });
+        var payload = new JsonObject
+        {
+            ["model"] = provider.Model,
+            ["messages"] = messages.DeepClone(),
+            ["stream"] = true,
+            ["temperature"] = tools == null ? 0.7 : 0.4,
+        };
+        if (tools != null && tools.Count > 0) payload["tools"] = tools.DeepClone();
 
         using var req = new HttpRequestMessage(HttpMethod.Post, provider.Url)
         {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json"),
         };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30)); // 30 秒内必须开始回答
+        timeout.CancelAfter(TimeSpan.FromSeconds(45)); // 45 秒内必须开始回答
 
         HttpResponseMessage resp;
         try
@@ -111,7 +128,7 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            throw new AiException("等了 30 秒 AI 都没回应，可能是网络不好，稍后再试试。");
+            throw new AiException("等了好久 AI 都没回应，可能是网络不好，稍后再试试。");
         }
         catch (HttpRequestException)
         {
@@ -124,11 +141,15 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
             {
                 string detail = "";
                 try { detail = await resp.Content.ReadAsStringAsync(ct); } catch { }
+                if (tools != null && (int)resp.StatusCode is 400 or 404 or 422 && LooksLikeNoToolSupport(detail))
+                    throw new ToolsNotSupportedException();
                 throw new AiException(FriendlyError(resp.StatusCode, detail));
             }
             timeout.CancelAfter(Timeout.InfiniteTimeSpan);
 
             var sb = new StringBuilder();
+            var calls = new SortedDictionary<int, (StringBuilder Id, StringBuilder Name, StringBuilder Args)>();
+            int lastIndex = -1;
             using var stream = await resp.Content.ReadAsStreamAsync(ct);
             using var reader = new StreamReader(stream, Encoding.UTF8);
             while (!reader.EndOfStream)
@@ -141,10 +162,17 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
                 try
                 {
                     using var doc = JsonDocument.Parse(data);
-                    if (!doc.RootElement.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0) continue;
+                    if (doc.RootElement.TryGetProperty("error", out var err) && err.ValueKind == JsonValueKind.Object)
+                    {
+                        var msg = err.TryGetProperty("message", out var mm) ? mm.GetString() : null;
+                        if (tools != null && LooksLikeNoToolSupport(msg)) throw new ToolsNotSupportedException();
+                        throw new AiException("AI 服务返回了错误：" + (msg ?? "未知错误"));
+                    }
+                    if (!doc.RootElement.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0) continue;
                     var first = choices[0];
-                    if (first.TryGetProperty("delta", out var delta) &&
-                        delta.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.String)
+                    if (!first.TryGetProperty("delta", out var delta) || delta.ValueKind != JsonValueKind.Object) continue;
+
+                    if (delta.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.String)
                     {
                         var piece = content.GetString();
                         if (!string.IsNullOrEmpty(piece))
@@ -153,12 +181,53 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
                             onDelta(sb.ToString());
                         }
                     }
+
+                    if (delta.TryGetProperty("tool_calls", out var tc) && tc.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var call in tc.EnumerateArray())
+                        {
+                            int index;
+                            if (call.TryGetProperty("index", out var ix) && ix.ValueKind == JsonValueKind.Number) index = ix.GetInt32();
+                            else if (call.TryGetProperty("id", out var idp) && idp.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(idp.GetString())) index = lastIndex + 1;
+                            else index = Math.Max(0, lastIndex);
+                            lastIndex = index;
+                            if (!calls.TryGetValue(index, out var acc))
+                            {
+                                acc = (new StringBuilder(), new StringBuilder(), new StringBuilder());
+                                calls[index] = acc;
+                            }
+                            if (call.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String && acc.Id.Length == 0)
+                                acc.Id.Append(id.GetString());
+                            if (call.TryGetProperty("function", out var fn) && fn.ValueKind == JsonValueKind.Object)
+                            {
+                                if (fn.TryGetProperty("name", out var nm) && nm.ValueKind == JsonValueKind.String && acc.Name.Length == 0)
+                                    acc.Name.Append(nm.GetString());
+                                if (fn.TryGetProperty("arguments", out var ar) && ar.ValueKind == JsonValueKind.String)
+                                    acc.Args.Append(ar.GetString());
+                            }
+                        }
+                    }
                 }
                 catch (JsonException) { /* 偶尔有不完整的数据行，跳过 */ }
             }
-            if (sb.Length == 0) throw new AiException("AI 没有返回内容，换个问法再试试。");
-            return sb.ToString();
+
+            var toolCalls = calls.Values
+                .Where(c => c.Name.Length > 0)
+                .Select((c, i) => new ToolCall(c.Id.Length > 0 ? c.Id.ToString() : $"call_{Guid.NewGuid():N}"[..20], c.Name.ToString(), c.Args.Length > 0 ? c.Args.ToString() : "{}"))
+                .ToList();
+            if (sb.Length == 0 && toolCalls.Count == 0) throw new AiException("AI 没有返回内容，换个问法再试试。");
+            return new RoundResult(sb.ToString(), toolCalls);
         }
+    }
+
+    /// <summary>根据报错内容判断是不是"这个模型不支持工具调用"。</summary>
+    private static bool LooksLikeNoToolSupport(string? detail)
+    {
+        if (string.IsNullOrEmpty(detail)) return false;
+        var d = detail.ToLowerInvariant();
+        return (d.Contains("tool") || d.Contains("function")) &&
+               (d.Contains("not support") || d.Contains("unsupported") || d.Contains("does not support") || d.Contains("invalid") ||
+                d.Contains("not allowed") || d.Contains("unknown") || d.Contains("不支持") || d.Contains("extra"));
     }
 
     private static string FriendlyError(HttpStatusCode code, string detail)
@@ -186,7 +255,6 @@ $@"你是""小猪""，是""小猪电脑助手""软件里的 AI 小帮手，性�
     }
 }
 
-public sealed class AiException : Exception
-{
-    public AiException(string message) : base(message) { }
-}
+public sealed record ToolCall(string Id, string Name, string Arguments);
+
+public sealed record RoundResult(string Text, List<ToolCall> ToolCalls);

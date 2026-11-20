@@ -116,5 +116,49 @@
                 </StackPanel>
             </Border>
         </Grid>
+
+        <!-- ========== 弹出的确认框（盖住整个窗口） ========== -->
+        <Grid x:Name="DialogLayer" Grid.RowSpan="2" Grid.ColumnSpan="2" Visibility="Collapsed" Opacity="0"
+              WindowChrome.IsHitTestVisibleInChrome="True">
+            <Border Background="#803B2A2E" />
+            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40" MaxWidth="560">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1" CenterX="280" CenterY="200" />
+                </Grid.RenderTransform>
+                <Border CornerRadius="28" Background="White" Effect="{StaticResource HoverShadow}" />
+                <Border CornerRadius="28" Padding="30,26,30,24">
+                    <StackPanel>
+                        <Border x:Name="DialogTag" HorizontalAlignment="Left" CornerRadius="10" Padding="10,3" Margin="0,0,0,10"
+                                Background="#FFE7E5" Visibility="Collapsed">
+                            <TextBlock x:Name="DialogTagText" FontSize="12" FontWeight="Bold" Foreground="#C9302C" />
+                        </Border>
+                        <DockPanel>
+                            <controls:PiggyMascot x:Name="DialogPig" DockPanel.Dock="Left" Width="76" Height="76" Margin="0,0,16,0"
+                                                  Pose="think" Animated="False" VerticalAlignment="Top" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="DialogTitle" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" />
+                                <TextBlock x:Name="DialogIntro" FontSize="14" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap"
+                                           LineHeight="21" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                        <StackPanel x:Name="DialogPoints" Margin="0,16,0,0" />
+                        <Border x:Name="DialogCheckRow" Background="{StaticResource PinkSoftBrush}" CornerRadius="14" Padding="14,10"
+                                Margin="0,16,0,0" Cursor="Hand" MouseLeftButtonUp="OnDialogCheckRowClick">
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="DialogCheck" Style="{StaticResource RoundCheck}" VerticalAlignment="Center"
+                                          Checked="OnDialogCheckChanged" Unchecked="OnDialogCheckChanged" />
+                                <TextBlock x:Name="DialogCheckText" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           Margin="10,0,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                            <Button x:Name="DialogCancel" Style="{StaticResource GhostButton}" Content="再想想" MinWidth="110" Margin="0,0,10,0"
+                                    Click="OnDialogCancel" />
+                            <Button x:Name="DialogOk" Style="{StaticResource PillButton}" Content="确定" MinWidth="140" Click="OnDialogOk" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

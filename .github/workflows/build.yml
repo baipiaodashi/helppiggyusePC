@@ -22,6 +22,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: 单元测试（危险命令拦截规则）
+        run: dotnet test tests/PiggyHelper.Tests/PiggyHelper.Tests.csproj -c Release --nologo
+
       - name: 打包成单个 exe
         run: >
           dotnet publish src/PiggyHelper/PiggyHelper.csproj -c Release -r win-x64
@@ -29,7 +32,62 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
           -o publish
 
+      - name: 打包高级模式引擎（Node.js + DeepSeek Harness）
+        shell: pwsh
+        run: |
+          $nodeVer = "24.22.3"
+          Invoke-WebRequest "https://nodejs.org/dist/v$nodeVer/node-v$nodeVer-win-x64.zip" -OutFile node.zip
+          Expand-Archive node.zip -DestinationPath nodetmp
+          $nodeDir = Resolve-Path "nodetmp/node-v$nodeVer-win-x64"
+          New-Item -ItemType Directory -Force engine | Out-Null
+          Copy-Item "$nodeDir/node.exe" engine/
+          Copy-Item "$nodeDir/LICENSE" engine/NODE-LICENSE.txt
+          Copy-Item harness/package.json, harness/package-lock.json engine/
+          Push-Location engine
+          $env:PATH = "$nodeDir;$env:PATH"
+          & "$nodeDir/npm.cmd" ci --ignore-scripts --omit=dev --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Pop-Location
+          # 运行时用不到的类型声明和调试映射，去掉能少几万个文件
+          $junk = Get-ChildItem engine/node_modules -Recurse -File -Include *.map, *.d.ts, *.d.mts, *.d.cts
+          Write-Host "去掉 $($junk.Count) 个用不到的文件"
+          $junk | Remove-Item -Force
+          $dsh = (Get-Content engine/node_modules/@deepseek-ai/dsh/package.json | ConvertFrom-Json).version
+          "DeepSeek Harness $dsh`nNode.js v$nodeVer`n打包于 $(Get-Date -Format 'yyyy-MM-dd')" | Set-Content engine/engine-info.txt -Encoding utf8
+          $count = (Get-ChildItem engine -Recurse -File).Count
+          Write-Host "引擎文件数：$count"
+          7z a -tzip -mx=5 -bso0 -bsp0 PiggyHarness-win-x64.zip ./engine/*
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Write-Host ("引擎压缩包大小：{0:N0} MB" -f ((Get-Item PiggyHarness-win-x64.zip).Length / 1MB))
+
+      - name: 高级模式自检（用假的 AI 接口走一遍：先问再做、危险命令拦下、拒绝就不做）
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force screenshots | Out-Null
+          $fake = Start-Process python -ArgumentList "harness/selftest/fake_llm.py", "18080" -PassThru -WorkingDirectory $PWD
+          Start-Sleep -Seconds 2
+          $env:PIGGY_HARNESS_DIR = (Resolve-Path engine).Path
+          $failed = $false
+          $runs = @(
+            @{ name = "pwsh7"; pwsh = "" },
+            @{ name = "powershell51"; pwsh = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" }
+          )
+          foreach ($run in $runs) {
+            if ($run.pwsh) { $env:PIGGY_PWSH_PATH = $run.pwsh } else { Remove-Item Env:PIGGY_PWSH_PATH -ErrorAction SilentlyContinue }
+            $report = Join-Path $PWD "screenshots/harness-selftest-$($run.name).txt"
+            $p = Start-Process publish/PiggyHelper.exe -ArgumentList "--harness-selftest", "`"$report`"" -PassThru
+            $null = $p.Handle
+            if (-not $p.WaitForExit(600000)) { $p.Kill(); Write-Host "$($run.name): 超时"; $failed = $true }
+            elseif ($p.ExitCode -ne 0) { Write-Host "$($run.name): 失败，退出码 $($p.ExitCode)"; $failed = $true }
+            else { Write-Host "$($run.name): 通过" }
+            if (Test-Path $report) { Get-Content $report }
+          }
+          Stop-Process -Id $fake.Id -ErrorAction SilentlyContinue
+          if (Test-Path fake_llm.log) { Copy-Item fake_llm.log screenshots/harness-fake-llm.log }
+          if ($failed) { exit 1 }
+
       - name: 启动测试并截图
+        if: always()
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force screenshots | Out-Null
@@ -45,7 +103,11 @@ jobs:
             @{ name = "9-ai-chat";   args = @("--page", "ai", "--auto", "demo") },
             @{ name = "10-settings"; args = @("--page", "settings") },
             @{ name = "11-cmap";     args = @("--page", "cleanup", "--auto", "map", "--delay", "45") },
-            @{ name = "12-cmap-cards"; args = @("--page", "cleanup", "--auto", "map2", "--delay", "8") }
+            @{ name = "12-cmap-cards"; args = @("--page", "cleanup", "--auto", "map2", "--delay", "8") },
+            @{ name = "13-ai-agent";    args = @("--page", "ai", "--auto", "agent-demo") },
+            @{ name = "14-ai-advanced"; args = @("--page", "ai", "--auto", "advanced-demo") },
+            @{ name = "15-ai-risk";     args = @("--page", "ai", "--auto", "advanced-dialog") },
+            @{ name = "16-ai-engine";   args = @("--page", "ai", "--auto", "engine-card") }
           )
           $failed = $false
           foreach ($c in $cases) {
@@ -62,6 +124,7 @@ jobs:
           if ($failed) { exit 1 }
 
       - name: 上传 exe
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: PiggyHelper-exe
@@ -106,6 +169,9 @@ jobs:
             下载 PiggyHelper-${{ inputs.release_version }}.exe，双击就能运行，不用安装。
             如果浏览器拦截 exe 下载，可以改下 zip 压缩包，解压后再双击运行。
             第一次运行如果 Windows 提示"已保护你的电脑"，点"更多信息"→"仍要运行"。
+
+            PiggyHarness-win-x64.zip 是"高级模式"用的引擎（Node.js + DeepSeek Harness），不用手动下载：第一次打开高级模式时小猪会自动下载。
           files: |
             PiggyHelper-${{ inputs.release_version }}.exe
             PiggyHelper-${{ inputs.release_version }}.zip
+            PiggyHarness-win-x64.zip

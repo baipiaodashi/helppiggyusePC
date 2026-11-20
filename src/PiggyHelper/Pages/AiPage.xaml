@@ -5,6 +5,7 @@
     <Grid Margin="20,4,20,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -19,12 +20,48 @@
             </StackPanel>
             <StackPanel>
                 <TextBlock Text="AI 问答" Style="{StaticResource PageTitle}" />
-                <TextBlock Text="像聊天一样问电脑问题，小猪会一步一步教你。" Style="{StaticResource PageSubtitle}" />
+                <TextBlock x:Name="Subtitle" Text="像聊天一样问电脑问题，小猪会一步一步教你。" Style="{StaticResource PageSubtitle}" />
             </StackPanel>
         </DockPanel>
 
+        <!-- 模式切换 -->
+        <StackPanel x:Name="ModeBar" Grid.Row="1" Margin="4,14,16,0">
+            <WrapPanel>
+                <RadioButton x:Name="ModeSafe" Style="{StaticResource CategoryPill}" GroupName="AgentMode" Margin="0,0,10,0"
+                             Checked="OnModeChecked">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,7,0" />
+                        <TextBlock Text="安全助手" VerticalAlignment="Center" />
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="ModeAdvanced" Style="{StaticResource CategoryPill}" GroupName="AgentMode" Margin="0,0,14,0"
+                             Checked="OnModeChecked">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE945;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,7,0" />
+                        <TextBlock Text="高级模式（DeepSeek Harness）" VerticalAlignment="Center" />
+                    </StackPanel>
+                </RadioButton>
+                <TextBlock x:Name="ModeHint" FontSize="13" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"
+                           TextWrapping="Wrap" MaxWidth="460" Margin="0,2,0,0" />
+            </WrapPanel>
+            <Border x:Name="AdvancedBanner" Background="#FFF4E5" BorderBrush="#FFD8A8" BorderThickness="2" CornerRadius="16"
+                    Padding="14,10" Margin="0,12,0,0" Visibility="Collapsed">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="#D9822B"
+                               VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <Button x:Name="EngineInfoButton" DockPanel.Dock="Right" Style="{StaticResource LinkButton}" FontSize="12"
+                            Content="引擎信息" Click="OnEngineInfoClick" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="高级模式：AI 可以在这台电脑上运行命令、读写文件。" FontSize="13.5" FontWeight="Bold" Foreground="#8A4B08" TextWrapping="Wrap" />
+                        <TextBlock x:Name="EngineStatus" FontSize="12.5" Foreground="#9A6A3A" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Text="每一步都会先给你看、等你点“同意”才做；格式化、删系统文件、改注册表这类危险操作，小猪会直接拦下。" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </StackPanel>
+
         <!-- 还没设置 Key -->
-        <ScrollViewer x:Name="SetupView" Grid.Row="1" Grid.RowSpan="2" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+        <ScrollViewer x:Name="SetupView" Grid.Row="1" Grid.RowSpan="3" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
             <ContentControl Style="{StaticResource Card}" Margin="0,18,16,36" Padding="28,24">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
@@ -41,12 +78,12 @@
         </ScrollViewer>
 
         <!-- 聊天 -->
-        <ScrollViewer x:Name="ChatScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                      Margin="0,14,0,0">
+        <ScrollViewer x:Name="ChatScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Margin="0,10,0,0">
             <StackPanel x:Name="ChatPanel" Margin="0,4,16,16" />
         </ScrollViewer>
 
-        <ContentControl x:Name="InputArea" Grid.Row="2" Style="{StaticResource Card}" Padding="12,10" Margin="0,6,16,20">
+        <ContentControl x:Name="InputArea" Grid.Row="3" Style="{StaticResource Card}" Padding="12,10" Margin="0,6,16,20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />

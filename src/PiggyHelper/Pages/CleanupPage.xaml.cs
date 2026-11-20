@@ -17,7 +17,7 @@ public partial class CleanupPage : UserControl
     private bool _scanned;
     private bool _working;
 
-    public CleanupPage(MainWindow main)
+    public CleanupPage(MainWindow main, string? tab = null)
     {
         _main = main;
         InitializeComponent();
@@ -38,6 +38,8 @@ public partial class CleanupPage : UserControl
 
         Loaded += (_, _) =>
         {
+            if (tab == "big") TabBig.IsChecked = true;
+            else if (tab == "map") TabMap.IsChecked = true;
             if (App.AutoAction == "scan") OnActionClick(this, new RoutedEventArgs());
             if (App.AutoAction == "big") { TabBig.IsChecked = true; OnFindClick(this, new RoutedEventArgs()); }
             if (App.AutoAction is "map" or "map2") TabMap.IsChecked = true;

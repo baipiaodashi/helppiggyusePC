@@ -10,6 +10,8 @@ public partial class MainWindow : Window
 {
     private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(7) };
     private bool _suppressNav;
+    private AiPage? _aiPage;
+    private TaskCompletionSource<bool>? _dialog;
 
     public MainWindow()
     {
@@ -19,6 +21,10 @@ public partial class MainWindow : Window
         StateChanged += (_, _) => UpdateMaximizeState();
         Closing += OnWindowClosing;
         NavHome.IsChecked = true;
+        PreviewKeyDown += (_, e) =>
+        {
+            if (_dialog != null && e.Key == System.Windows.Input.Key.Escape) { CloseDialog(false); e.Handled = true; }
+        };
     }
 
     // ---------- 标题栏 ----------
@@ -74,11 +80,11 @@ public partial class MainWindow : Window
         if (sender is RadioButton rb) ShowPage(KeyOf(rb), null);
     }
 
-    /// <summary>跳转到某个页面（query 用于把搜索词带过去）。</summary>
+    /// <summary>跳转到某个页面（query 用于把搜索词带过去）。key 可以带子页面，比如 cleanup:big。</summary>
     public void Navigate(string key, string? query = null)
     {
         _suppressNav = true;
-        var target = key switch
+        var target = key.Split(':')[0] switch
         {
             "navigator" => NavNavigator,
             "cleanup" => NavCleanup,
@@ -94,18 +100,109 @@ public partial class MainWindow : Window
 
     private void ShowPage(string key, string? query)
     {
-        UserControl page = key switch
+        var parts = key.Split(':', 2);
+        var sub = parts.Length > 1 ? parts[1] : null;
+        UserControl page = parts[0] switch
         {
             "navigator" => new NavigatorPage(this, query),
-            "cleanup" => new CleanupPage(this),
+            "cleanup" => new CleanupPage(this, sub),
             "shortcuts" => new ShortcutsPage(this),
-            "ai" => new AiPage(this, query),
+            // AI 页面一直留着：切到别的页面再回来，聊天记录和正在做的事都还在
+            "ai" => _aiPage ??= new AiPage(this),
             "settings" => new SettingsPage(this),
             _ => new HomePage(this),
         };
+        if (page == _aiPage && !string.IsNullOrWhiteSpace(query)) _aiPage.Ask(query);
         PageHost.Content = page;
         page.Opacity = 0;
         page.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(180)));
+    }
+
+    /// <summary>小猪退出时关掉后台的 AI 引擎。</summary>
+    public void ShutdownAgents() => _aiPage?.Shutdown();
+
+    // ---------- 确认框 ----------
+
+    /// <summary>
+    /// 弹出一个盖住整个窗口的确认框。checkText 不为空时，要先勾选才能点确定。
+    /// danger = true 时确定按钮是红色的。
+    /// </summary>
+    public Task<bool> ShowConfirmAsync(string title, string intro, IEnumerable<string> points, string okText,
+        string? checkText = null, bool danger = false, string? tag = null, string pose = "think", string? cancelText = "再想想")
+    {
+        _dialog?.TrySetResult(false);
+        _dialog = new TaskCompletionSource<bool>();
+        DialogTitle.Text = title;
+        DialogIntro.Text = intro;
+        DialogIntro.Visibility = string.IsNullOrEmpty(intro) ? Visibility.Collapsed : Visibility.Visible;
+        DialogPig.Pose = pose;
+        DialogTag.Visibility = tag == null ? Visibility.Collapsed : Visibility.Visible;
+        DialogTagText.Text = tag ?? "";
+        DialogPoints.Children.Clear();
+        foreach (var p in points)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
+            var dot = new Border
+            {
+                Width = 8, Height = 8, CornerRadius = new CornerRadius(4), Margin = new Thickness(4, 8, 12, 0), VerticalAlignment = VerticalAlignment.Top,
+                Background = danger ? new System.Windows.Media.SolidColorBrush(Services.Palette.Parse("#E5534B")) : (System.Windows.Media.Brush)FindResource("PinkBrush"),
+            };
+            DockPanel.SetDock(dot, Dock.Left);
+            row.Children.Add(dot);
+            row.Children.Add(new TextBlock { Text = p, FontSize = 14, LineHeight = 21, TextWrapping = TextWrapping.Wrap });
+            DialogPoints.Children.Add(row);
+        }
+        DialogCheck.IsChecked = false;
+        DialogCheckRow.Visibility = checkText == null ? Visibility.Collapsed : Visibility.Visible;
+        DialogCheckText.Text = checkText ?? "";
+        DialogOk.Content = okText;
+        DialogCancel.Content = cancelText ?? "";
+        DialogCancel.Visibility = cancelText == null ? Visibility.Collapsed : Visibility.Visible;
+        DialogOk.IsEnabled = checkText == null;
+        if (danger)
+        {
+            DialogOk.Background = new System.Windows.Media.SolidColorBrush(Services.Palette.Parse("#E5534B"));
+            DialogOk.BorderBrush = new System.Windows.Media.SolidColorBrush(Services.Palette.Parse("#B93A33"));
+        }
+        else
+        {
+            DialogOk.ClearValue(BackgroundProperty);
+            DialogOk.ClearValue(BorderBrushProperty);
+        }
+
+        DialogLayer.Visibility = Visibility.Visible;
+        DialogLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)));
+        var pop = new DoubleAnimation(0.92, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.5 } };
+        DialogScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, pop);
+        DialogScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, pop);
+        return _dialog.Task;
+    }
+
+    private void CloseDialog(bool result)
+    {
+        var tcs = _dialog;
+        _dialog = null;
+        var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(140));
+        fade.Completed += (_, _) => { if (_dialog == null) DialogLayer.Visibility = Visibility.Collapsed; };
+        DialogLayer.BeginAnimation(OpacityProperty, fade);
+        tcs?.TrySetResult(result);
+    }
+
+    private void OnDialogOk(object sender, RoutedEventArgs e) => CloseDialog(true);
+    private void OnDialogCancel(object sender, RoutedEventArgs e) => CloseDialog(false);
+    private void OnDialogCheckChanged(object sender, RoutedEventArgs e) => DialogOk.IsEnabled = DialogCheck.IsChecked == true;
+
+    private void OnDialogCheckRowClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject d && IsInside(d, DialogCheck)) return; // 点的就是勾选框本身
+        DialogCheck.IsChecked = DialogCheck.IsChecked != true;
+    }
+
+    private static bool IsInside(DependencyObject d, DependencyObject parent)
+    {
+        for (var x = d; x != null; x = System.Windows.Media.VisualTreeHelper.GetParent(x))
+            if (x == parent) return true;
+        return false;
     }
 
     // ---------- 底部气泡 ----------

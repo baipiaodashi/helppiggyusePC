@@ -14,7 +14,7 @@
     <RootNamespace>PiggyHelper</RootNamespace>
     <Product>小猪电脑助手</Product>
     <AssemblyTitle>小猪电脑助手</AssemblyTitle>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationIcon>Assets\piggy.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
@@ -31,6 +31,7 @@
   <ItemGroup>
     <Resource Include="Assets\piggy.ico" />
     <Resource Include="Assets\pig\*.png" />
+    <EmbeddedResource Include="..\..\harness\piggy-gate\index.js" LogicalName="piggy-gate.js" />
   </ItemGroup>
 
 </Project>

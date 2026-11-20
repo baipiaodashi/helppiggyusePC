@@ -22,6 +22,9 @@ public sealed class AppSettings
     public string? AiKeyProtected { get; set; }
     public string? AiCustomUrl { get; set; }
     public string? AiCustomModel { get; set; }
+
+    /// <summary>AI 动手的方式："safe" = 安全助手（默认），"advanced" = 高级模式（DeepSeek Harness）。</summary>
+    public string AgentMode { get; set; } = "safe";
 }
 
 public static class SettingsService

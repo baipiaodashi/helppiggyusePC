@@ -44,7 +44,8 @@ jobs:
             @{ name = "8-ai-setup";  args = @("--page", "ai", "--auto", "setup") },
             @{ name = "9-ai-chat";   args = @("--page", "ai", "--auto", "demo") },
             @{ name = "10-settings"; args = @("--page", "settings") },
-            @{ name = "11-cmap";     args = @("--page", "cleanup", "--auto", "map", "--delay", "45") }
+            @{ name = "11-cmap";     args = @("--page", "cleanup", "--auto", "map", "--delay", "45") },
+            @{ name = "12-cmap-cards"; args = @("--page", "cleanup", "--auto", "map2", "--delay", "8") }
           )
           $failed = $false
           foreach ($c in $cases) {

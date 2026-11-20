@@ -38,9 +38,9 @@
                         <TextBlock Text="{Binding ElsewhereNote}" FontSize="12" FontWeight="Bold" Foreground="#3B7FD9" Margin="0,6,0,0"
                                    Visibility="{Binding HasElsewhere, Converter={StaticResource BoolToVis}}" />
                         <WrapPanel Margin="0,10,0,0">
-                            <Button Style="{StaticResource GhostButton}" Content="打开文件夹看看" FontSize="13" Padding="16,6" Margin="0,0,10,0"
+                            <Button Style="{StaticResource GhostButton}" Content="打开文件夹看看" FontSize="13" Padding="18,0" Height="40" Margin="0,0,10,0"
                                     Visibility="{Binding ShowOpen, Converter={StaticResource BoolToVis}}" Click="OnAreaOpenClick" />
-                            <Button Style="{StaticResource GhostButton}" Content="{Binding ActionText}" FontSize="13" Padding="16,6"
+                            <Button Style="{StaticResource GhostButton}" Content="{Binding ActionText}" FontSize="13" Padding="18,0" Height="40"
                                     Foreground="#3B7FD9" BorderBrush="#BFD8FA"
                                     Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}" Click="OnAreaActionClick" />
                         </WrapPanel>
@@ -307,19 +307,19 @@
                 </ContentControl>
 
                 <TextBlock Style="{StaticResource SectionTitle}" Margin="4,26,0,4">
-                    <Run Text="&#x2705; " /><Run Text="可以自己整理" />
+                    <Run Text="&#xE73E;" FontFamily="{StaticResource IconFont}" Foreground="#2E9E70" FontSize="18" BaselineAlignment="Center" /><Run Text=" " /><Run Text="可以自己整理" />
                 </TextBlock>
                 <TextBlock Text="这些是你自己的文件，看好了就能删。" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="4,0,0,12" />
                 <ItemsControl x:Name="MapSafe" ItemTemplate="{StaticResource AreaTemplate}" Focusable="False" />
 
                 <TextBlock Style="{StaticResource SectionTitle}" Margin="4,14,0,4">
-                    <Run Text="&#x26A0;&#xFE0F; " /><Run Text="要用对方法" />
+                    <Run Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" Foreground="#E0A020" FontSize="18" BaselineAlignment="Center" /><Run Text=" " /><Run Text="要用对方法" />
                 </TextBlock>
                 <TextBlock Text="能清理，但不能直接删文件夹，要按小猪说的方法来。" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="4,0,0,12" />
                 <ItemsControl x:Name="MapCareful" ItemTemplate="{StaticResource AreaTemplate}" Focusable="False" />
 
                 <TextBlock Style="{StaticResource SectionTitle}" Margin="4,14,0,4">
-                    <Run Text="&#x26D4; " /><Run Text="千万别动" />
+                    <Run Text="&#xE733;" FontFamily="{StaticResource IconFont}" Foreground="#D6455A" FontSize="18" BaselineAlignment="Center" /><Run Text=" " /><Run Text="千万别动" />
                 </TextBlock>
                 <TextBlock Text="系统要用的东西，删了电脑可能出问题。了解一下就好。" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="4,0,0,12" />
                 <ItemsControl x:Name="MapNever" ItemTemplate="{StaticResource AreaTemplate}" Focusable="False" />

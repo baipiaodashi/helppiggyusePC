@@ -40,7 +40,13 @@ public partial class CleanupPage : UserControl
         {
             if (App.AutoAction == "scan") OnActionClick(this, new RoutedEventArgs());
             if (App.AutoAction == "big") { TabBig.IsChecked = true; OnFindClick(this, new RoutedEventArgs()); }
-            if (App.AutoAction == "map") TabMap.IsChecked = true;
+            if (App.AutoAction is "map" or "map2") TabMap.IsChecked = true;
+            if (App.AutoAction == "map2") // 自动截图用：往下滚，看看卡片
+            {
+                var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+                t.Tick += (_, _) => { t.Stop(); MapPanel.ScrollToVerticalOffset(820); };
+                t.Start();
+            }
         };
         Unloaded += (_, _) => _mapCts?.Cancel();
     }
@@ -96,10 +102,14 @@ public partial class CleanupPage : UserControl
         RefreshMapBar();
         try
         {
-            foreach (var a in todo)
+            // 各块同时量，小的先量完先显示
+            var running = todo.ToDictionary(a => Task.Run(() => DiskMapService.Measure(a, ct), ct), a => a);
+            while (running.Count > 0)
             {
-                long size = await Task.Run(() => DiskMapService.Measure(a, ct), ct);
-                a.Size = size;
+                var finished = await Task.WhenAny(running.Keys);
+                var a = running[finished];
+                running.Remove(finished);
+                a.Size = await finished;
                 done++;
                 MapStatus.Text = $"小猪正在一块一块地量……（{done}/{todo.Count}）";
                 RefreshMapBar();

@@ -6,8 +6,9 @@ using System.Text;
 namespace PiggyHelper.Services.Harness;
 
 /// <summary>
-/// CI 用的自检：用一个假的 AI 接口（harness/selftest/fake_llm.py）把高级模式完整走一遍，
-/// 确认每一步都先问了小猪、同意了才执行、危险命令被拦下、拒绝了就不执行。
+/// CI 用的自检：用一个假的 AI 接口（harness/selftest/fake_llm.py）把高级模式完整走一遍。
+/// 高级模式按 Harness 原本的方式运行：普通命令直接执行，引擎自己的沙盒挡住工作文件夹外面的改动，
+/// AI 申请更大权限时引擎会问用户（同意才做、拒绝就不做）。
 /// </summary>
 public static class HarnessSelfTest
 {
@@ -37,7 +38,7 @@ public static class HarnessSelfTest
             client.PermissionHandler = (call, _) =>
             {
                 var card = ActionDescriber.Describe(call.ToolName, call.Input);
-                bool allow = !reject && card.Risk.Risk != CommandRisk.Block && call.Asks <= 1;
+                bool allow = !reject;
                 decisions.Enqueue($"{call.ToolName}|{card.Risk.Risk}|{(allow ? "allow" : "deny")}|asks={call.Asks}|{card.Title}|{card.Raw.Replace("\n", " ")}");
                 return Task.FromResult(allow);
             };
@@ -48,7 +49,7 @@ public static class HarnessSelfTest
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(6));
             var sw = Stopwatch.StartNew();
             await client.StartAsync(dir, "sk-test", cts.Token);
-            L($"started in {sw.Elapsed.TotalSeconds:F1}s, gate marker present: {File.Exists(HarnessEngine.GateMarkerPath)}");
+            L($"started in {sw.Elapsed.TotalSeconds:F1}s, workspace: {HarnessEngine.WorkspaceDir}, temp: {HarnessEngine.TempDir ?? "(default)"}");
 
             async Task<(string Stop, List<string> Decisions, List<HarnessToolCall> Calls, string Text)> Round(string prompt)
             {
@@ -68,36 +69,43 @@ public static class HarnessSelfTest
                 return (stop, d, c, said);
             }
 
-            // 1. 安全的命令：先问，同意后执行，能看到输出
+            // 1. 普通命令：直接执行（小猪不额外询问），能看到输出
             var r1 = await Round("Please say hello");
-            Check(r1.Decisions.Count >= 1 && r1.Decisions.All(x => x.Contains("|allow|")), "safe command asked for permission and was allowed");
-            Check(r1.Calls.Any(c => c.Status == "completed" && c.Output.Contains("hello-from-harness")), "safe command ran and returned output");
+            Check(r1.Decisions.Count == 0, "normal command ran without an extra prompt");
+            Check(r1.Calls.Any(c => c.Status == "completed" && c.Output.Contains("hello-from-harness")), "normal command ran and returned output");
             Check(r1.Text.Contains("All done"), "assistant replied after the tool");
 
-            // 2. 危险命令：小猪的规则拦下，不执行
+            // 2. 删系统文件：小猪不拦，但引擎自己的沙盒应该挡住
             await client.NewSessionAsync(cts.Token);
             var hosts = OperatingSystem.IsWindows() ? @"C:\Windows\System32\drivers\etc\hosts" : "/etc/hosts";
             bool hostsBefore = File.Exists(hosts);
             var r2 = await Round("PIGGY_DANGER delete the hosts file");
-            Check(r2.Decisions.Count >= 1 && r2.Decisions.All(x => x.Contains("|Block|deny|")), "dangerous command was blocked by Piggy's rules");
-            Check(r2.Calls.All(c => c.Status != "completed"), "dangerous command did not run");
-            Check(File.Exists(hosts) == hostsBefore, "hosts file untouched");
+            Check(r2.Decisions.Count == 0, "Piggy did not add its own block");
+            Check(File.Exists(hosts) == hostsBefore, "engine sandbox kept the hosts file");
 
-            // 3. 用户点"不同意"：不执行
-            await client.NewSessionAsync(cts.Token);
-            reject = true;
-            var r3 = await Round("Please say hello again");
-            reject = false;
-            Check(r3.Decisions.Count >= 1 && r3.Decisions.All(x => x.Contains("|deny|")), "user rejection was sent to the engine");
-            Check(r3.Calls.All(c => c.Status != "completed" && !c.Output.Contains("hello-from-harness")), "rejected command did not run");
-
-            // 4. 沙盒：同意了一条往工作文件夹外面写文件的命令，看看引擎自己的保护有没有挡住（只记录，不算失败）
-            await client.NewSessionAsync(cts.Token);
             var probe = OperatingSystem.IsWindows() ? @"C:\piggy-sandbox-probe.txt" : "/opt/piggy-sandbox-probe.txt";
             try { File.Delete(probe); } catch { }
-            var r4 = await Round("PIGGY_SANDBOX write outside the workspace");
-            L($"INFO sandbox: probe file written outside workspace = {File.Exists(probe)}; asks = {string.Join(",", r4.Decisions.Select(x => x.Split('|')[3]))}");
-            Check(r4.Decisions.Count >= 1, "sandbox probe asked for permission");
+
+            // 3. 往工作文件夹外面写：沙盒挡住
+            await client.NewSessionAsync(cts.Token);
+            var r3 = await Round("PIGGY_SANDBOX write outside the workspace");
+            Check(!File.Exists(probe), "engine sandbox blocked writing outside the workspace");
+            try { File.Delete(probe); } catch { }
+
+            // 4. AI 申请更大权限，用户点"不同意"：引擎问了，没有执行
+            await client.NewSessionAsync(cts.Token);
+            reject = true;
+            var r4 = await Round("PIGGY_ESCALATE write outside the workspace");
+            reject = false;
+            Check(r4.Decisions.Count >= 1 && r4.Decisions.All(x => x.Contains("|deny|")), "engine asked before escalating; the user said no");
+            Check(!File.Exists(probe) && r4.Calls.All(c => c.Status != "completed"), "rejected escalation did not run");
+
+            // 5. 同样的申请，用户点"同意"：执行
+            await client.NewSessionAsync(cts.Token);
+            var r5 = await Round("PIGGY_ESCALATE write outside the workspace");
+            Check(r5.Decisions.Count >= 1 && r5.Decisions.All(x => x.Contains("|allow|")), "engine asked before escalating; the user said yes");
+            Check(r5.Calls.Any(c => c.Status == "completed" && c.Output.Contains("wrote-outside-workspace")), "approved escalation ran");
+            L($"INFO escalated write landed = {File.Exists(probe)}");
             try { File.Delete(probe); } catch { }
 
             Check(fatal == null, "no fatal engine error" + (fatal == null ? "" : ": " + fatal));

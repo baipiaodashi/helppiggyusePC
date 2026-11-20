@@ -17,10 +17,10 @@ public sealed class HarnessToolCall
     public JsonObject? Input { get; set; }
     public string Status { get; set; } = "pending";
     public string Output { get; set; } = "";
-    /// <summary>用户（或小猪的安全规则）已经对它做过决定。</summary>
+    /// <summary>引擎问过用户、用户已经做了决定。</summary>
     public bool Decided { get; set; }
     public bool Allowed { get; set; }
-    /// <summary>引擎为这一步问过几次（第二次通常是想跳出保护范围）。</summary>
+    /// <summary>引擎为这一步问过几次。</summary>
     public int Asks { get; set; }
 
     /// <summary>工具名（Harness 的 title 就是工具名，比如 pwsh、read、write）。</summary>
@@ -60,7 +60,6 @@ public sealed class AcpClient : IAsyncDisposable
     /// <summary>启动引擎并新建一个对话。</summary>
     public async Task StartAsync(string engineDir, string apiKey, CancellationToken ct)
     {
-        if (File.Exists(HarnessEngine.GateMarkerPath)) File.Delete(HarnessEngine.GateMarkerPath);
         var psi = new ProcessStartInfo(HarnessEngine.NodeExe(engineDir))
         {
             UseShellExecute = false,
@@ -77,7 +76,6 @@ public sealed class AcpClient : IAsyncDisposable
         psi.ArgumentList.Add("acp");
         psi.Environment["DSH_HOME"] = HarnessEngine.HomeDir;
         psi.Environment["PIGGY_AI_KEY"] = apiKey;
-        psi.Environment["PIGGY_GATE_MARKER"] = HarnessEngine.GateMarkerPath;
         psi.Environment["DSH_TELEMETRY_DISABLED"] = "1";
         psi.Environment["DSH_PERMISSION_MODE"] = "workspace-write";
         psi.Environment["NO_PROXY"] = "127.0.0.1,localhost";
@@ -93,10 +91,6 @@ public sealed class AcpClient : IAsyncDisposable
         {
             if (e.Data == null) return;
             lock (_stderr) _stderr.AppendLine(e.Data);
-            // 闸门插件没装上：立刻停掉，绝不让 AI 在没有确认的情况下动手
-            if (e.Data.Contains("piggy-gate", StringComparison.OrdinalIgnoreCase) &&
-                (e.Data.Contains("fail", StringComparison.OrdinalIgnoreCase) || e.Data.Contains("did not activate", StringComparison.OrdinalIgnoreCase)))
-                Abort("安全闸门没有装好，为了安全，小猪已经停掉了引擎。");
         };
         _proc.Exited += (_, _) =>
         {
@@ -120,14 +114,6 @@ public sealed class AcpClient : IAsyncDisposable
             },
         }, timeout.Token);
         await NewSessionAsync(timeout.Token);
-
-        // 确认闸门插件真的在工作（它启动时会写一个标记文件）
-        for (int i = 0; i < 50 && !File.Exists(HarnessEngine.GateMarkerPath); i++) await Task.Delay(100, ct);
-        if (!File.Exists(HarnessEngine.GateMarkerPath))
-        {
-            await DisposeAsync();
-            throw new AiException("安全闸门没有装好，为了安全，小猪不会让引擎动手。可以重新下载一次引擎试试。");
-        }
     }
 
     public async Task NewSessionAsync(CancellationToken ct)
@@ -254,12 +240,6 @@ public sealed class AcpClient : IAsyncDisposable
                         if (c?["content"]?["text"]?.GetValue<string>() is string txt) sb.Append(txt);
                     if (sb.Length > 0) call.Output = sb.ToString();
                 }
-                // 第二道保险：如果一个工具没经过确认就已经执行完了，说明闸门失效，立刻停掉引擎
-                if (call.Status is "completed" && !call.Decided && call.ToolName != "todo_write")
-                {
-                    Abort("发现有操作没经过你的确认就执行了，为了安全，小猪已经停掉了引擎。");
-                    break;
-                }
                 ToolCallChanged?.Invoke(call);
                 break;
             }
@@ -274,16 +254,12 @@ public sealed class AcpClient : IAsyncDisposable
             var callId = p?["toolCall"]?["toolCallId"]?.GetValue<string>() ?? "";
             var call = _calls.GetOrAdd(callId, _ => new HarnessToolCall { Id = callId });
             bool allow = false;
-            // 同一步引擎又问了一次（通常是被保护挡住、想用更大的权限再试）：已经拒绝过的直接拒绝，同意过的要再问一次
             call.Asks++;
-            if (!(call.Decided && !call.Allowed))
+            try
             {
-                try
-                {
-                    if (PermissionHandler != null) allow = await PermissionHandler(call, CancellationToken.None);
-                }
-                catch { allow = false; }
+                if (PermissionHandler != null) allow = await PermissionHandler(call, CancellationToken.None);
             }
+            catch { allow = false; }
             call.Decided = true;
             call.Allowed = allow;
             response = new JsonObject

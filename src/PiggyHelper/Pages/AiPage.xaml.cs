@@ -108,10 +108,10 @@ public partial class AiPage : UserControl
     {
         AdvancedBanner.Visibility = Advanced ? Visibility.Visible : Visibility.Collapsed;
         ModeHint.Text = Advanced
-            ? "AI 能运行命令、整理文件，每一步都等你点头。"
+            ? "原版 Harness：AI 能直接运行命令、整理文件。"
             : "AI 能帮你查电脑情况、打开设置，不会改动任何东西。";
         Subtitle.Text = Advanced
-            ? "告诉小猪你想做什么，它会一步步动手，每一步都先问你。"
+            ? "告诉小猪你想做什么，它会直接动手，每一步都显示给你看。"
             : "像聊天一样问电脑问题，小猪会查查你的电脑，再一步一步教你。";
         Input.Tag = Advanced
             ? "告诉小猪要做什么，比如：帮我看看桌面上有哪些文件（Enter 发送）"
@@ -127,16 +127,16 @@ public partial class AiPage : UserControl
             if (Busy) { ModeSafe.IsChecked = true; _main.ShowToast("等小猪这次回答完，再切换模式吧。"); return; }
             var ok = await _main.ShowConfirmAsync(
                 "要打开高级模式吗？",
-                "高级模式会用 DeepSeek Harness 引擎，让 AI 在你的电脑上真的动手：运行命令、读写文件。它很能干，但也可能做错事。",
+                "高级模式按 DeepSeek Harness 原本的方式运行，让 AI 在你的电脑上真的动手：运行命令、读写文件。它很能干，但也可能做错事。",
                 new[]
                 {
-                    "AI 想做的每一步，都会先变成一张卡片给你看，你点“同意”才会做。看不懂的，就点“不同意”。",
-                    "格式化硬盘、删除系统文件、改注册表、关杀毒软件、下载运行程序这些危险操作，小猪会直接拦下。",
-                    "就算有保护，AI 也可能改错你自己的文件（比如作业）。重要的文件，最好先复制一份。",
-                    "第一次使用要下载引擎（几百 MB），只需要下载一次。",
+                    "AI 会直接动手，不会每一步都问你。它做的每一步都会显示成一张卡片，可以随时点“停止”。",
+                    "引擎自带沙盒：只能改你自己的文件夹（桌面、文档、下载……）；要改别的地方，会先弹出卡片问你。",
+                    "AI 可能改错、删错你自己的文件（比如作业）。重要的文件，最好先复制一份。",
+                    "第一次使用要下载引擎（三百多 MB），只需要下载一次。",
                 },
                 "我知道了，打开高级模式",
-                checkText: "我已了解风险，会认真看每一步再点同意",
+                checkText: "我已了解风险",
                 danger: true, tag: "有风险的功能");
             if (!ok)
             {
@@ -148,7 +148,7 @@ public partial class AiPage : UserControl
             SettingsService.Current.AgentMode = "advanced";
             SettingsService.Save();
             UpdateModeUi();
-            AddSystemNote("已切换到高级模式：小猪可以动手了，每一步都会先问你。");
+            AddSystemNote("已切换到高级模式：AI 会直接动手，每一步都会显示出来，随时可以点“停止”。");
             return;
         }
         if (sender == ModeSafe && SettingsService.Current.AgentMode != "safe")
@@ -489,7 +489,7 @@ public partial class AiPage : UserControl
     {
         var turn = AddTurn();
         turn.SetSegment(Advanced
-            ? "你好呀，我是小猪！🐷\n现在是**高级模式**：你说想做什么，我会一步步在电脑上动手。每一步我都会先给你看，你点“同意”我才做。可以这样试试："
+            ? "你好呀，我是小猪！🐷\n现在是**高级模式**：你说想做什么，我会直接在电脑上动手，做的每一步都会显示出来，想停就点“停止”。可以这样试试："
             : "你好呀，我是小猪！🐷\n电脑上遇到任何不会的，都可以直接问我，用大白话说就行。我还能帮你**看看电脑的情况**、**打开设置**。点一下就能问：");
         turn.RenderSegment();
         turn.EndSegment();

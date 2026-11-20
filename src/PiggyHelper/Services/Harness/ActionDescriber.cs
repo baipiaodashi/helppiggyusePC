@@ -18,7 +18,7 @@ public static class ActionDescriber
         {
             var just = input.TryGetPropertyValue("justification", out var j) && j is JsonValue jv2 && jv2.TryGetValue<string>(out var js) ? js : null;
             var risk = card.Risk.Risk == CommandRisk.Block ? card.Risk
-                : new GuardResult(CommandRisk.Warn, "这一步要跳出小猪的保护范围、用更大的权限运行" + (just == null ? "" : "（AI 说：" + just + "）"));
+                : new GuardResult(CommandRisk.Warn, "这一步要跳出引擎的保护范围（沙盒），用更大的权限运行" + (just == null ? "" : "（AI 说：" + just + "）"));
             card = card with { Risk = risk };
         }
         return card;
@@ -80,8 +80,27 @@ public static class ActionDescriber
                 return new ActionCard("换一个工作文件夹", S("path", "directory") ?? "", new GuardResult(CommandRisk.Ok, "只是换个位置"), raw);
             case "todo_write":
                 return new ActionCard("记一下待办步骤", "", new GuardResult(CommandRisk.Ok, "只是做个记录"), raw);
+            case "subagent":
+            case "subagent_fork":
+                return new ActionCard("派一个小助手去做一部分事", S("description", "task", "prompt") ?? "", new GuardResult(CommandRisk.Ok, "小助手做的每一步也会显示出来"), raw);
+            case "list_agents":
+            case "send_message":
+            case "wait_agent":
+                return new ActionCard("和小助手沟通", S("message", "agent", "name") ?? "", new GuardResult(CommandRisk.Ok, "只是沟通"), raw);
+            case "workflow":
+                return new ActionCard("按步骤安排一组任务", S("description", "name") ?? "", new GuardResult(CommandRisk.Ok, "引擎自带的任务安排"), raw);
+            case "create_goal":
+            case "get_goal":
+            case "update_goal":
+                return new ActionCard("记一下要完成的目标", S("goal", "description", "title") ?? "", new GuardResult(CommandRisk.Ok, "只是做个记录"), raw);
+            case "job_list":
+            case "job_output":
+            case "job_kill":
+                return new ActionCard(tool == "job_kill" ? "停掉一个后台任务" : "看看后台任务", S("id", "job_id") ?? "", new GuardResult(CommandRisk.Ok, "后台任务"), raw);
+            case "skill":
+                return new ActionCard("使用一个技能", S("name", "skill") ?? "", new GuardResult(CommandRisk.Ok, "引擎自带的技能"), raw);
             default:
-                return new ActionCard($"使用工具：{tool}", "", new GuardResult(CommandRisk.Warn, "小猪不认识这个工具，拿不准就别同意"), raw);
+                return new ActionCard($"使用工具：{tool}", "", new GuardResult(CommandRisk.Ok, "引擎自带的工具"), raw);
         }
     }
 }

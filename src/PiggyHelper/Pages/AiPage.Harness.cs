@@ -22,7 +22,7 @@ public partial class AiPage
     {
         var dir = HarnessEngine.FindEngine();
         EngineInfoButton.Visibility = dir == null ? Visibility.Collapsed : Visibility.Visible;
-        EngineStatus.Text = "每一步都会先给你看、等你点“同意”才做；格式化、删系统文件、改注册表这类危险操作，小猪会直接拦下。" +
+        EngineStatus.Text = "按 Harness 原本的方式运行：AI 会直接动手，每一步都显示在卡片上。引擎自带沙盒，只能改你自己的文件夹，要改别的地方时会先问你。" +
                             (dir == null && App.AutoAction is not ("advanced-demo") ? "第一次使用要先下载引擎。" : "");
     }
 
@@ -37,7 +37,7 @@ public partial class AiPage
                 "版本：" + info.Replace("\r", "").Replace("\n", "，"),
                 "放在：" + dir,
                 "AI 干活的文件夹：" + HarnessEngine.WorkspaceDir,
-                "开源协议：MIT。你的 API Key 只放在这台电脑上，不会写进引擎的文件里。",
+                "开源协议：MIT。你的 API Key 只放在这台电脑上，不会写进引擎的文件里；引擎的遥测上报已关闭。",
             },
             "知道了", pose: "search", cancelText: null);
         _ = remove;
@@ -82,6 +82,8 @@ public partial class AiPage
         }
 
         turn.Placeholder("小猪正在思考……");
+        _harnessCards.Clear();
+        _harnessChips.Clear();
         _harnessTurn = turn;
         string stop;
         try
@@ -137,56 +139,90 @@ public partial class AiPage
         _ => ("\uE90F", "查看详细参数"),
     };
 
+    /// <summary>只看不改的工具：用一个小标签显示，不占地方。</summary>
+    private static bool IsQuietTool(string tool) => tool is "read" or "read_image" or "glob" or "grep" or "web_fetch" or "web_search" or "working_directory"
+        or "list_agents" or "send_message" or "wait_agent" or "create_goal" or "get_goal" or "update_goal" or "job_list" or "job_output" or "skill";
+
+    private readonly Dictionary<string, ChatTurn.Chip> _harnessChips = new();
+
+    /// <summary>
+    /// 引擎自己要问的权限（比如 AI 申请用更大的权限运行）：在这一步的卡片上显示"同意 / 不同意"。
+    /// 小猪不额外拦截，也不额外询问。
+    /// </summary>
     private async Task<bool> AskHarnessAsync(HarnessToolCall call)
     {
         var turn = _harnessTurn;
         if (turn == null || !Busy) return false;
-        var card = ActionDescriber.Describe(call.ToolName, call.Input);
-        // 引擎自己的权限确认又问了一次同一步：卡片上已经写明要"跳出保护范围"、用户也同意了，就不重复问
-        if (call.Asks > 1 && call.Allowed && WantsEscalation(call) && card.Risk.Risk != CommandRisk.Block)
+        if (!_harnessCards.TryGetValue(call.Id, out var view))
         {
-            if (_harnessCards.TryGetValue(call.Id, out var existing)) existing.SetStatus("你同意了，正在用更大的权限运行……", "#2E8550", "\uE768");
-            return Busy;
+            _harnessChips.Remove(call.Id);
+            view = AddHarnessCard(turn, call);
         }
-        if (call.Asks > 1 && card.Risk.Risk != CommandRisk.Block)
-            card = card with
-            {
-                Title = "再试一次：" + card.Title,
-                Risk = new GuardResult(CommandRisk.Warn, "刚才这一步被小猪的保护挡住了，AI 想用更大的权限再做一次。不确定的话就点“不同意”。"),
-            };
-        var (icon, rawLabel) = ToolLook(call.ToolName);
-        var view = turn.AddCard(icon, card.Title, card.Detail, card.Risk, card.Raw, rawLabel);
-        _harnessCards[call.Id] = view;
+        view.SetStatus("Harness 想先问问你：这一步可以做吗？", "#A36200", "\uE9CE");
         ChatScroll.ScrollToEnd();
-        if (card.Risk.Risk == CommandRisk.Block)
-        {
-            view.Decide(false, "小猪已经自动拒绝了，并请 AI 换一个安全的办法。");
-            return false;
-        }
         Track(view);
         var ok = await view.AskAsync();
         return ok && Busy;
     }
 
-    private static bool WantsEscalation(HarnessToolCall call)
+    private ActionCardView AddHarnessCard(ChatTurn turn, HarnessToolCall call)
     {
-        var p = call.Arg("sandbox_permissions");
-        return !string.IsNullOrWhiteSpace(p) && p != "use_default";
+        var card = ActionDescriber.Describe(call.ToolName, call.Input);
+        // 风险只是提个醒，不拦
+        var risk = card.Risk.Risk == CommandRisk.Block ? new GuardResult(CommandRisk.Warn, card.Risk.Reason) : card.Risk;
+        var (icon, rawLabel) = ToolLook(call.ToolName);
+        var view = turn.AddCard(icon, card.Title, card.Detail, risk, card.Raw, rawLabel);
+        _harnessCards[call.Id] = view;
+        return view;
     }
 
     private void OnHarnessToolCall(HarnessToolCall call)
     {
-        if (!_harnessCards.TryGetValue(call.Id, out var view)) return;
+        var turn = _harnessTurn;
+        if (call.ToolName == "todo_write" || string.IsNullOrEmpty(call.ToolName)) return;
+
+        if (IsQuietTool(call.ToolName) && !_harnessCards.ContainsKey(call.Id))
+        {
+            if (!_harnessChips.TryGetValue(call.Id, out var chip))
+            {
+                if (turn == null || call.Input == null) return;
+                var desc = ActionDescriber.Describe(call.ToolName, call.Input);
+                chip = turn.AddChip("小猪正在" + desc.Title + "……");
+                _harnessChips[call.Id] = chip;
+                ChatScroll.ScrollToEnd();
+            }
+            if (call.Status is "completed" or "failed")
+            {
+                var desc = ActionDescriber.Describe(call.ToolName, call.Input);
+                var what = string.IsNullOrWhiteSpace(desc.Detail) ? desc.Title : desc.Title + "：" + desc.Detail;
+                if (what.Length > 60) what = what[..60] + "…";
+                var output = call.Output.Length > 6000 ? call.Output[..6000] + "\n……" : call.Output;
+                chip.Done((call.Status == "completed" ? "" : "没成功：") + what, output.Trim(), call.Status == "completed");
+            }
+            return;
+        }
+
+        if (!_harnessCards.TryGetValue(call.Id, out var view))
+        {
+            if (turn == null || call.Input == null) return;
+            view = AddHarnessCard(turn, call);
+            ChatScroll.ScrollToEnd();
+        }
         if (call.Status == "completed")
         {
             view.SetStatus("做完了", "#2E8550", "\uE73E");
             view.ShowOutput(call.Output, false);
         }
-        else if (call.Status == "failed" && call.Allowed)
+        else if (call.Status == "failed")
         {
-            view.SetStatus("没有成功，AI 会看看出了什么问题", "#C9302C", "\uE711");
-            view.ShowOutput(call.Output, true);
+            if (call.Decided && !call.Allowed) view.SetStatus("你没有同意，这一步没有做", "#8C7A84", "\uE711");
+            else
+            {
+                view.SetStatus("没有成功，AI 会看看出了什么问题", "#C9302C", "\uE711");
+                view.ShowOutput(call.Output, true);
+            }
         }
+        else if (!view.IsWaiting) view.SetStatus("正在做……", "#7451DD", "\uE768");
     }
 
     // ---------- 下载引擎 ----------
@@ -353,7 +389,7 @@ public partial class AiPage
         turn.SetSegment("最大的是 **剪映安装包.exe**（612 MB）。安装包装好软件以后就没用了，可以删掉。要我帮你把它移到回收站吗？");
         turn.EndSegment();
 
-        AddUser("好，帮我删掉安装包，顺便把系统的临时文件也清了");
+        AddUser("好，帮我把它移到回收站，再在 D 盘建一个“学习资料”文件夹");
         var t2 = AddTurn();
         t2.SetSegment("好的，先把安装包移到回收站（之后还能恢复）：");
         var b = ActionDescriber.Describe("pwsh", new JsonObject
@@ -362,15 +398,18 @@ public partial class AiPage
             ["description"] = "把下载文件夹里的“剪映安装包.exe”移到回收站",
         });
         var v2 = t2.AddCard("\uE756", b.Title, b.Detail, b.Risk, b.Raw, "查看原始命令");
-        _ = v2.AskAsync();
-        t2.SetSegment("系统临时文件我也试着清一下：");
+        v2.SetStatus("做完了", "#2E8550", "\uE73E");
+        t2.SetSegment("D 盘在我的工作范围外面，需要你同意一下：");
         var c = ActionDescriber.Describe("pwsh", new JsonObject
         {
-            ["command"] = "Remove-Item C:\\Windows\\Temp\\* -Recurse -Force",
-            ["description"] = "删除系统临时文件夹里的文件",
+            ["command"] = "New-Item -ItemType Directory -Path 'D:\\学习资料'",
+            ["description"] = "在 D 盘新建“学习资料”文件夹",
+            ["sandbox_permissions"] = "danger-full-access",
+            ["justification"] = "要在用户文件夹外面（D 盘）新建文件夹",
         });
         var v3 = t2.AddCard("\uE756", c.Title, c.Detail, c.Risk, c.Raw, "查看原始命令");
-        v3.Decide(false, "小猪已经自动拒绝了，并请 AI 换一个安全的办法。");
+        v3.SetStatus("Harness 想先问问你：这一步可以做吗？", "#A36200", "\uE9CE");
+        _ = v3.AskAsync();
     }
 
     private void AddEngineDemo()

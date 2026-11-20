@@ -54,7 +54,7 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="高级模式：AI 可以在这台电脑上运行命令、读写文件。" FontSize="13.5" FontWeight="Bold" Foreground="#8A4B08" TextWrapping="Wrap" />
                         <TextBlock x:Name="EngineStatus" FontSize="12.5" Foreground="#9A6A3A" TextWrapping="Wrap" Margin="0,2,0,0"
-                                   Text="每一步都会先给你看、等你点“同意”才做；格式化、删系统文件、改注册表这类危险操作，小猪会直接拦下。" />
+                                   Text="按 Harness 原本的方式运行：AI 会直接动手，每一步都显示在卡片上。引擎自带沙盒，只能改你自己的文件夹，要改别的地方时会先问你。" />
                     </StackPanel>
                 </DockPanel>
             </Border>

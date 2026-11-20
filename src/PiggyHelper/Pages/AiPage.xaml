@@ -28,7 +28,7 @@
             <ContentControl Style="{StaticResource Card}" Margin="0,18,16,36" Padding="28,24">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-                        <controls:PiggyMascot Width="72" Height="72" Margin="0,0,16,0" />
+                        <controls:PiggyMascot Width="84" Height="84" Margin="0,0,16,0" Pose="think" />
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="先给小猪接上 AI 大脑" FontSize="20" FontWeight="Bold" />
                             <TextBlock Text="只需要设置一次，大约 3 分钟。很多平台注册就送免费额度，日常提问花不了几毛钱。"

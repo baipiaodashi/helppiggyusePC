@@ -54,7 +54,7 @@ public partial class ShortcutsPage : UserControl
     /// <summary>演示一下提示卡长什么样（4 秒后自动消失）。</summary>
     private void OnTryClick(object sender, RoutedEventArgs e)
     {
-        _preview ??= new ShortcutOverlay();
+        _preview ??= ShortcutOverlay.Shared;
         _preview.ShowFor("Ctrl");
         var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
         t.Tick += (_, _) => { t.Stop(); _preview?.HideCard(); };

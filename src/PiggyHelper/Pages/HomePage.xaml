@@ -53,7 +53,7 @@
                             <Path Data="M 0,0 L 14,0 L 4,10 Z" Fill="White" VerticalAlignment="Bottom" HorizontalAlignment="Center"
                                   Margin="0,0,0,-9" />
                         </Grid>
-                        <controls:PiggyMascot Width="150" Height="150" Margin="0,8,0,0" />
+                        <controls:PiggyMascot Width="160" Height="160" Margin="0,4,0,0" Pose="cheer" />
                     </StackPanel>
                 </Grid>
             </ContentControl>
@@ -67,19 +67,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid Width="56" Height="56" VerticalAlignment="Top">
-                            <Border CornerRadius="18">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#9BE3C3" Offset="0" />
-                                        <GradientStop Color="#45C08D" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
-                            <Border CornerRadius="18" Background="{StaticResource ClayHighlight}" />
-                            <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Grid>
+                        <controls:PiggyMascot Width="78" Height="78" Margin="-8,-8,0,-8" VerticalAlignment="Top" Pose="broom" Animated="False" />
                         <StackPanel Grid.Column="1" Margin="16,0,0,0">
                             <TextBlock Text="一键清理" FontSize="17" FontWeight="Bold" />
                             <TextBlock Text="C 盘满了？清掉没用的缓存和垃圾文件。" FontSize="13" Foreground="{StaticResource SubTextBrush}"
@@ -94,19 +82,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid Width="56" Height="56" VerticalAlignment="Top">
-                            <Border CornerRadius="18">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#A8CFFF" Offset="0" />
-                                        <GradientStop Color="#5A9CF2" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
-                            <Border CornerRadius="18" Background="{StaticResource ClayHighlight}" />
-                            <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Grid>
+                        <controls:PiggyMascot Width="78" Height="78" Margin="-8,-8,0,-8" VerticalAlignment="Top" Pose="key" Animated="False" />
                         <StackPanel Grid.Column="1" Margin="16,0,0,0">
                             <TextBlock Text="快捷键指南" FontSize="17" FontWeight="Bold" />
                             <TextBlock Text="按住 Ctrl 一秒，就会弹出能用的快捷键。" FontSize="13" Foreground="{StaticResource SubTextBrush}"
@@ -121,19 +97,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid Width="56" Height="56" VerticalAlignment="Top">
-                            <Border CornerRadius="18">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#CDB8FF" Offset="0" />
-                                        <GradientStop Color="#8E6CF0" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
-                            <Border CornerRadius="18" Background="{StaticResource ClayHighlight}" />
-                            <TextBlock Text="&#xE8BD;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Grid>
+                        <controls:PiggyMascot Width="78" Height="78" Margin="-8,-8,0,-8" VerticalAlignment="Top" Pose="think" Animated="False" />
                         <StackPanel Grid.Column="1" Margin="16,0,0,0">
                             <TextBlock Text="AI 问答" FontSize="17" FontWeight="Bold" />
                             <TextBlock Text="遇到不懂的，像聊天一样问 AI 小猪。" FontSize="13" Foreground="{StaticResource SubTextBrush}"

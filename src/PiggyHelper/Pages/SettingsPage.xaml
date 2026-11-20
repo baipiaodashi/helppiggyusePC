@@ -100,7 +100,7 @@
             <TextBlock Text="关于" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
             <ContentControl Style="{StaticResource Card}" Padding="24,20">
                 <DockPanel>
-                    <controls:PiggyMascot Width="72" Height="72" DockPanel.Dock="Left" Margin="0,0,18,0" />
+                    <controls:PiggyMascot Width="80" Height="80" DockPanel.Dock="Left" Margin="0,0,18,0" Pose="wave" />
                     <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="下载最新版本" VerticalAlignment="Center"
                             Click="OnUpdateClick" />
                     <StackPanel VerticalAlignment="Center">

@@ -40,16 +40,152 @@ public partial class CleanupPage : UserControl
         {
             if (App.AutoAction == "scan") OnActionClick(this, new RoutedEventArgs());
             if (App.AutoAction == "big") { TabBig.IsChecked = true; OnFindClick(this, new RoutedEventArgs()); }
+            if (App.AutoAction == "map") TabMap.IsChecked = true;
         };
+        Unloaded += (_, _) => _mapCts?.Cancel();
     }
 
     // ---------- 标签切换 ----------
     private void OnTabChecked(object sender, RoutedEventArgs e)
     {
-        if (JunkPanel == null || BigPanel == null) return; // 初始化中
-        bool big = TabBig.IsChecked == true;
-        JunkPanel.Visibility = big ? Visibility.Collapsed : Visibility.Visible;
+        if (JunkPanel == null || BigPanel == null || MapPanel == null) return; // 初始化中
+        bool big = TabBig.IsChecked == true, map = TabMap.IsChecked == true;
+        JunkPanel.Visibility = !big && !map ? Visibility.Visible : Visibility.Collapsed;
         BigPanel.Visibility = big ? Visibility.Visible : Visibility.Collapsed;
+        MapPanel.Visibility = map ? Visibility.Visible : Visibility.Collapsed;
+        if (map) StartMap();
+    }
+
+    // ---------- C 盘里有什么（只解释，不删除） ----------
+    private List<DiskArea>? _areas;
+    private CancellationTokenSource? _mapCts;
+    private long _diskTotal, _diskUsed;
+    private bool _mapDone;
+
+    private async void StartMap()
+    {
+        if (_areas != null) return;
+        _areas = DiskMapService.CreateAreas();
+        try
+        {
+            var d = new DriveInfo(DiskMapService.SystemDrive);
+            _diskTotal = d.TotalSize;
+            _diskUsed = d.TotalSize - d.AvailableFreeSpace;
+        }
+        catch { }
+
+        var drive = DiskMapService.SystemDrive.TrimEnd('\\', ':');
+        foreach (var a in _areas)
+        {
+            var existing = a.Paths.Where(p => !string.IsNullOrEmpty(p) && Directory.Exists(p)).ToList();
+            if (existing.Count > 0 && existing.All(p => !DiskMapService.OnSystemDrive(p)))
+            {
+                var otherDrive = Path.GetPathRoot(existing[0])?.TrimEnd('\\', ':') ?? "别的";
+                a.ElsewhereNote = $"你的这个文件夹放在 {otherDrive} 盘，不占 {drive} 盘的地方。";
+            }
+        }
+        MapSafe.ItemsSource = _areas.Where(a => a.Level == DiskLevel.Safe).ToList();
+        MapCareful.ItemsSource = _areas.Where(a => a.Level == DiskLevel.Careful).ToList();
+        MapNever.ItemsSource = _areas.Where(a => a.Level == DiskLevel.Never).ToList();
+
+        _mapCts = new CancellationTokenSource();
+        var ct = _mapCts.Token;
+        var todo = _areas.Where(a => !a.IsOther).ToList();
+        int done = 0;
+        MapStatus.Text = "小猪正在一块一块地量，大约需要半分钟……";
+        RefreshMapBar();
+        try
+        {
+            foreach (var a in todo)
+            {
+                long size = await Task.Run(() => DiskMapService.Measure(a, ct), ct);
+                a.Size = size;
+                done++;
+                MapStatus.Text = $"小猪正在一块一块地量……（{done}/{todo.Count}）";
+                RefreshMapBar();
+            }
+        }
+        catch (OperationCanceledException) { return; }
+
+        var other = _areas.First(a => a.IsOther);
+        other.Size = Math.Max(0, _diskUsed - todo.Sum(a => a.Size));
+        _mapDone = true;
+        RefreshMapBar();
+        long mine = _areas.Where(a => a.Level == DiskLevel.Safe).Sum(a => Math.Max(0, a.Size));
+        MapStatus.Text = $"量好啦！{drive} 盘一共用了 {Format.Bytes(_diskUsed)}，其中你自己能整理的文件有 {Format.Bytes(mine)}。";
+    }
+
+    /// <summary>画出顶部那根彩色条：每一块地方占多长，剩下的灰色是空着的空间。</summary>
+    private void RefreshMapBar()
+    {
+        if (_areas == null) return;
+        MapBar.Children.Clear();
+        MapBar.ColumnDefinitions.Clear();
+        MapLegend.Children.Clear();
+        double total = Math.Max(1, _diskTotal);
+        double sum = 0;
+        int col = 0;
+        void Add(string hex, double size, string? title, string? sizeText)
+        {
+            if (size > 0)
+            {
+                MapBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(size, GridUnitType.Star) });
+                var seg = new Border { Background = new SolidColorBrush(Palette.Parse(hex)), ToolTip = title == null ? null : $"{title}：{sizeText}" };
+                if (col > 0) seg.BorderBrush = Brushes.White;
+                if (col > 0) seg.BorderThickness = new Thickness(2, 0, 0, 0);
+                Grid.SetColumn(seg, col++);
+                MapBar.Children.Add(seg);
+            }
+            if (title == null) return;
+            var item = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 18, 4) };
+            item.Children.Add(new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Palette.Parse(hex)), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            item.Children.Add(new TextBlock { Text = title, FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+            item.Children.Add(new TextBlock { Text = " " + sizeText, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("SubTextBrush"), VerticalAlignment = VerticalAlignment.Center });
+            MapLegend.Children.Add(item);
+        }
+        foreach (var a in _areas.Where(a => a.Size > 0).OrderByDescending(a => a.Size))
+        {
+            Add(a.Color, a.Size, a.Title, a.SizeText);
+            sum += a.Size;
+        }
+        Add("#F1E8EE", Math.Max(0, total - sum), null, null);
+        if (_diskTotal > 0)
+        {
+            var freeItem = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 18, 4) };
+            freeItem.Children.Add(new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Palette.Parse("#F1E8EE")), BorderBrush = new SolidColorBrush(Palette.Parse("#E2D3DC")), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            freeItem.Children.Add(new TextBlock { Text = _mapDone ? "还空着" : "还空着 / 还没量完", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+            if (_mapDone)
+                freeItem.Children.Add(new TextBlock { Text = " " + Format.Bytes(Math.Max(0, _diskTotal - _diskUsed)), FontSize = 13, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("SubTextBrush"), VerticalAlignment = VerticalAlignment.Center });
+            MapLegend.Children.Add(freeItem);
+        }
+        OnMapBarSizeChanged(MapBar, null);
+    }
+
+    private void OnMapBarSizeChanged(object sender, SizeChangedEventArgs? e)
+    {
+        if (MapBar.ActualWidth > 0)
+            MapBar.Clip = new RectangleGeometry(new Rect(0, 0, MapBar.ActualWidth, MapBar.ActualHeight), 12, 12);
+    }
+
+    private void OnAreaOpenClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not DiskArea a || a.OpenPath is not string path) return;
+        try { Process.Start(new ProcessStartInfo("explorer.exe", path.StartsWith("shell:") ? path : $"\"{path}\"") { UseShellExecute = true }); }
+        catch { _main.ShowToast("没能打开这个文件夹。"); }
+    }
+
+    private void OnAreaActionClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not DiskArea a || a.ActionTarget is not string target) return;
+        switch (target)
+        {
+            case "#junk": TabJunk.IsChecked = true; break;
+            case "#big": TabBig.IsChecked = true; break;
+            default:
+                try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); }
+                catch { _main.ShowToast("没能打开，可以在开始菜单里搜索\u201C安装的应用\u201D。"); }
+                break;
+        }
     }
 
     // ---------- C 盘空间 ----------
@@ -199,6 +335,7 @@ public partial class CleanupPage : UserControl
         BigBar.Visibility = list.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         BigEmpty.Visibility = list.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
         BigEmptyText.Text = "没有找到大文件，你的电脑很整洁！";
+        BigEmptyPig.Pose = "cheer";
         FindButton.Content = "重新查找";
         FindButton.IsEnabled = true;
         UpdateSelection();
@@ -244,6 +381,7 @@ public partial class CleanupPage : UserControl
             BigBar.Visibility = Visibility.Collapsed;
             BigEmpty.Visibility = Visibility.Visible;
             BigEmptyText.Text = "全部整理完啦！";
+            BigEmptyPig.Pose = "cheer";
         }
         int failed = sel.Count - done.Count;
         _main.ShowToast(done.Count > 0

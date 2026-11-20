@@ -230,7 +230,7 @@ public partial class AiPage : UserControl
         var row = new Grid();
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var avatar = new PiggyMascot { Width = 44, Height = 44, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 10, 0) };
+        var avatar = new PiggyMascot { Pose = "face", Animated = false, Width = 44, Height = 44, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 10, 0) };
         row.Children.Add(avatar);
         Grid.SetColumn(card, 1);
         row.Children.Add(card);

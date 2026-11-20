@@ -4,18 +4,26 @@
         xmlns:controls="clr-namespace:PiggyHelper.Controls"
         Title="快捷键提示" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
-        SizeToContent="WidthAndHeight" Focusable="False"
+        Width="900" Height="400" Left="-32000" Top="-32000" Focusable="False"
         FontFamily="{StaticResource UiFont}" Foreground="{StaticResource TextBrush}"
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
-    <Grid x:Name="Root" Margin="28" MaxWidth="820">
+    <!-- 整张卡片先画成一张图缓存起来（BitmapCache），动画时只移动这张图，不用每一帧都重新算阴影，所以更顺滑 -->
+    <Grid x:Name="Root" Margin="28" MaxWidth="820" HorizontalAlignment="Left" VerticalAlignment="Top"
+          RenderTransformOrigin="0.5,1" Opacity="0">
+        <Grid.CacheMode>
+            <BitmapCache EnableClearType="False" SnapsToDevicePixels="True" />
+        </Grid.CacheMode>
         <Grid.RenderTransform>
-            <TranslateTransform x:Name="Shift" />
+            <TransformGroup>
+                <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
+                <TranslateTransform x:Name="Shift" />
+            </TransformGroup>
         </Grid.RenderTransform>
         <Border CornerRadius="30" Background="White" Effect="{StaticResource HoverShadow}" />
         <Border CornerRadius="30" BorderBrush="{StaticResource PinkLightBrush}" BorderThickness="3" Padding="26,20,26,18">
             <StackPanel>
                 <DockPanel Margin="0,0,0,14">
-                    <controls:PiggyMascot Width="46" Height="46" DockPanel.Dock="Left" Margin="0,0,12,0" />
+                    <controls:PiggyMascot Width="50" Height="50" DockPanel.Dock="Left" Margin="0,0,12,0" Pose="face" Animated="False" />
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock FontSize="19" FontWeight="Bold">
                             <Run Text="按住" /><Run x:Name="KeyName" Text=" Ctrl " Foreground="{StaticResource PinkDeepBrush}" /><Run Text="的时候，再按：" />
@@ -24,7 +32,8 @@
                                    Foreground="{StaticResource FaintTextBrush}" Margin="0,4,0,0" />
                     </StackPanel>
                 </DockPanel>
-                <ItemsControl x:Name="List" Focusable="False">
+                <Grid x:Name="ListHost" />
+                <ItemsControl x:Name="List" Focusable="False" Visibility="Collapsed">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="2" />

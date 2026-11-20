@@ -28,19 +28,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Grid Width="54" Height="54" Margin="0,0,16,0">
-                    <Border CornerRadius="18">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#A8CFFF" Offset="0" />
-                                <GradientStop Color="#5A9CF2" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
-                    <Border CornerRadius="18" Background="{StaticResource ClayHighlight}" />
-                    <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="White"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Grid>
+                <controls:PiggyMascot Width="84" Height="84" Margin="-6,-10,12,-10" Pose="key" />
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="按住提示卡" FontSize="17" FontWeight="Bold" />
                     <TextBlock Text="在任何地方按住 Ctrl、Alt 或 Win 键一秒钟，屏幕下方就会弹出可以搭配的快捷键，松开就消失。"
@@ -99,7 +87,7 @@
                 </ItemsControl>
 
                 <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" Margin="0,40,0,0" Visibility="Collapsed">
-                    <controls:PiggyMascot Width="120" Height="120" />
+                    <controls:PiggyMascot Width="130" Height="130" Pose="search" />
                     <TextBlock Text="没找到相关的快捷键" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0" />
                     <TextBlock Text="换个词试试，比如&#x201C;复制&#x201D;&#x201C;截图&#x201D;&#x201C;窗口&#x201D;。" FontSize="14"
                                Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Center" Margin="0,6,0,0" />

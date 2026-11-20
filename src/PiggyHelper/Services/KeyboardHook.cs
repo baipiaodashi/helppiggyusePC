@@ -76,7 +76,7 @@ public sealed class KeyboardHook : IDisposable
 public sealed class HoldDetector : IDisposable
 {
     private readonly KeyboardHook _hook = new();
-    private readonly DispatcherTimer _timer = new();
+    private readonly DispatcherTimer _timer = new(DispatcherPriority.Normal);
     private string? _holding;   // 正在按住的修饰键："Ctrl" / "Alt" / "Win"
     private bool _shown;
 

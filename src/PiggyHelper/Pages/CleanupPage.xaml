@@ -4,6 +4,50 @@
              xmlns:controls="clr-namespace:PiggyHelper.Controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!-- C 盘里的一块地方：只有解释和"打开文件夹"，没有删除按钮 -->
+        <DataTemplate x:Key="AreaTemplate">
+            <ContentControl Style="{StaticResource Card}" Padding="22,18" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Width="52" Height="52" VerticalAlignment="Top" Margin="0,0,16,0">
+                        <Border CornerRadius="17" Background="{Binding IconBrush}" />
+                        <Border CornerRadius="17" Background="{StaticResource ClayHighlight}" />
+                        <TextBlock Text="{Binding Icon}" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Grid.Column="1">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="{Binding TintBrush}" CornerRadius="10" Padding="10,3" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SizeText}" FontSize="14" FontWeight="Bold" Foreground="{Binding SolidBrush}" />
+                            </Border>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+                                <Border Background="{Binding LevelBg}" CornerRadius="9" Padding="9,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding LevelText}" FontSize="12" FontWeight="Bold" Foreground="{Binding LevelFg}" />
+                                </Border>
+                            </StackPanel>
+                        </DockPanel>
+                        <TextBlock Text="{Binding What}" FontSize="14" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="21" />
+                        <TextBlock Text="怎么处理：" FontSize="13" FontWeight="Bold" Foreground="{Binding LevelFg}" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding HowTo}" FontSize="13" Foreground="{StaticResource SubTextBrush}"
+                                   TextWrapping="Wrap" Margin="0,2,0,0" LineHeight="20" />
+                        <TextBlock Text="{Binding ElsewhereNote}" FontSize="12" FontWeight="Bold" Foreground="#3B7FD9" Margin="0,6,0,0"
+                                   Visibility="{Binding HasElsewhere, Converter={StaticResource BoolToVis}}" />
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Style="{StaticResource GhostButton}" Content="打开文件夹看看" FontSize="13" Padding="16,6" Margin="0,0,10,0"
+                                    Visibility="{Binding ShowOpen, Converter={StaticResource BoolToVis}}" Click="OnAreaOpenClick" />
+                            <Button Style="{StaticResource GhostButton}" Content="{Binding ActionText}" FontSize="13" Padding="16,6"
+                                    Foreground="#3B7FD9" BorderBrush="#BFD8FA"
+                                    Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}" Click="OnAreaActionClick" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </ContentControl>
+        </DataTemplate>
     </UserControl.Resources>
     <Grid Margin="20,4,20,0">
         <Grid.RowDefinitions>
@@ -21,6 +65,7 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,18,0,8">
             <RadioButton x:Name="TabJunk" Style="{StaticResource CategoryPill}" GroupName="CleanTab" Content="垃圾清理" IsChecked="True" Checked="OnTabChecked" />
             <RadioButton x:Name="TabBig" Style="{StaticResource CategoryPill}" GroupName="CleanTab" Content="大文件整理" Checked="OnTabChecked" />
+            <RadioButton x:Name="TabMap" Style="{StaticResource CategoryPill}" GroupName="CleanTab" Content="C 盘里有什么" Checked="OnTabChecked" />
         </StackPanel>
 
         <!-- ================= 垃圾清理 ================= -->
@@ -74,7 +119,7 @@
                 <ContentControl x:Name="DoneBanner" Style="{StaticResource Card}" Background="#E3F7EE" Padding="22,16"
                                 Margin="0,18,0,0" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
-                        <controls:PiggyMascot Width="64" Height="64" Margin="0,0,16,0" />
+                        <controls:PiggyMascot Width="72" Height="72" Margin="0,0,16,0" Pose="cheer" />
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock x:Name="DoneTitle" FontSize="19" FontWeight="Bold" Foreground="#2E9E70" />
                             <TextBlock x:Name="DoneDetail" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="0,6,0,0"
@@ -178,7 +223,7 @@
             </ContentControl>
 
             <StackPanel x:Name="BigEmpty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,16,40">
-                <controls:PiggyMascot Width="120" Height="120" />
+                <controls:PiggyMascot x:Name="BigEmptyPig" Width="130" Height="130" Pose="search" />
                 <TextBlock x:Name="BigEmptyText" Text="点右上角的&#x201C;开始查找&#x201D;，小猪帮你翻一翻" FontSize="15" FontWeight="Bold"
                            Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Center" Margin="0,12,0,0" />
             </StackPanel>
@@ -233,5 +278,52 @@
                 </DockPanel>
             </ContentControl>
         </Grid>
+        <!-- ================= C 盘里有什么 ================= -->
+        <ScrollViewer x:Name="MapPanel" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+            <StackPanel Margin="0,6,16,36">
+                <ContentControl Style="{StaticResource Card}" Padding="24,20">
+                    <StackPanel>
+                        <DockPanel>
+                            <controls:PiggyMascot DockPanel.Dock="Left" Width="96" Height="96" Margin="-6,-8,14,-4" Pose="search" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="C 盘里都放了什么？" FontSize="19" FontWeight="Bold" />
+                                <TextBlock FontSize="13" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="20"
+                                           Text="小猪把 C 盘分成了几块，告诉你每块是什么、能不能自己删、该怎么删。这一页只帮你看懂，不会删除任何东西。" />
+                                <TextBlock x:Name="MapStatus" FontSize="13" FontWeight="Bold" Foreground="{StaticResource PinkDeepBrush}" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                        <Grid x:Name="MapBar" Height="24" Margin="0,18,0,0" SizeChanged="OnMapBarSizeChanged" />
+                        <WrapPanel x:Name="MapLegend" Margin="0,12,0,0" />
+                    </StackPanel>
+                </ContentControl>
+
+                <ContentControl Style="{StaticResource Card}" Background="#FFF4D6" Padding="20,14" Margin="0,16,0,0">
+                    <DockPanel>
+                        <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="20" Foreground="#E0A020"
+                                   VerticalAlignment="Center" Margin="0,0,12,0" />
+                        <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" FontSize="14" LineHeight="21"
+                                   Text="想删什么，点&#x201C;打开文件夹看看&#x201D;自己挑。选中文件按 Delete 键，文件会先进回收站，删错了还能还原。拿不准的就别删，可以去&#x201C;AI 问答&#x201D;问问小猪。" />
+                    </DockPanel>
+                </ContentControl>
+
+                <TextBlock Style="{StaticResource SectionTitle}" Margin="4,26,0,4">
+                    <Run Text="&#x2705; " /><Run Text="可以自己整理" />
+                </TextBlock>
+                <TextBlock Text="这些是你自己的文件，看好了就能删。" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="4,0,0,12" />
+                <ItemsControl x:Name="MapSafe" ItemTemplate="{StaticResource AreaTemplate}" Focusable="False" />
+
+                <TextBlock Style="{StaticResource SectionTitle}" Margin="4,14,0,4">
+                    <Run Text="&#x26A0;&#xFE0F; " /><Run Text="要用对方法" />
+                </TextBlock>
+                <TextBlock Text="能清理，但不能直接删文件夹，要按小猪说的方法来。" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="4,0,0,12" />
+                <ItemsControl x:Name="MapCareful" ItemTemplate="{StaticResource AreaTemplate}" Focusable="False" />
+
+                <TextBlock Style="{StaticResource SectionTitle}" Margin="4,14,0,4">
+                    <Run Text="&#x26D4; " /><Run Text="千万别动" />
+                </TextBlock>
+                <TextBlock Text="系统要用的东西，删了电脑可能出问题。了解一下就好。" FontSize="13" Foreground="{StaticResource SubTextBrush}" Margin="4,0,0,12" />
+                <ItemsControl x:Name="MapNever" ItemTemplate="{StaticResource AreaTemplate}" Focusable="False" />
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>

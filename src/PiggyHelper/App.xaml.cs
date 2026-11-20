@@ -86,7 +86,7 @@ public partial class App : Application
             Tray.OpenRequested += ShowMainWindow;
             Tray.ExitRequested += ExitApp;
 
-            _overlay = new ShortcutOverlay();
+            _overlay = ShortcutOverlay.Shared;
             _hold = new HoldDetector();
             _hold.HoldStarted += mod => _overlay.ShowFor(mod);
             _hold.HoldEnded += () => _overlay.HideCard();
@@ -96,13 +96,18 @@ public partial class App : Application
         _main = new MainWindow();
         if (!minimized) _main.Show();
         if (startPage != null && startPage != "overlay") _main.Navigate(startPage, query);
+        if (!smokeTest && _overlay != null)
+        {
+            var overlay = _overlay;
+            Dispatcher.BeginInvoke(() => { try { overlay.Prewarm(); } catch { } }, DispatcherPriority.ApplicationIdle);
+        }
 
         if (smokeTest)
         {
             Window target = _main;
             if (startPage == "overlay")
             {
-                _overlay = new ShortcutOverlay();
+                _overlay = ShortcutOverlay.Shared;
                 _overlay.ShowFor("Ctrl");
                 target = _overlay;
             }

@@ -51,7 +51,7 @@
 
                 <!-- 没找到 -->
                 <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" Margin="0,40,0,0" Visibility="Collapsed">
-                    <controls:PiggyMascot Width="120" Height="120" />
+                    <controls:PiggyMascot Width="130" Height="130" Pose="search" />
                     <TextBlock Text="小猪没找到相关的功能" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0" />
                     <TextBlock Text="换个说法试试，比如把&#x201C;没声音&#x201D;换成&#x201C;音量&#x201D;。" FontSize="15"
                                Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Center" Margin="0,6,0,0" />

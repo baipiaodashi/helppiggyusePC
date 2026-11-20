@@ -93,7 +93,7 @@ public static class HarnessSelfTest
 
             // 4. 沙盒：同意了一条往工作文件夹外面写文件的命令，看看引擎自己的保护有没有挡住（只记录，不算失败）
             await client.NewSessionAsync(cts.Token);
-            var probe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "piggy-sandbox-probe.txt");
+            var probe = OperatingSystem.IsWindows() ? @"C:\piggy-sandbox-probe.txt" : "/opt/piggy-sandbox-probe.txt";
             try { File.Delete(probe); } catch { }
             var r4 = await Round("PIGGY_SANDBOX write outside the workspace");
             L($"INFO sandbox: probe file written outside workspace = {File.Exists(probe)}; asks = {string.Join(",", r4.Decisions.Select(x => x.Split('|')[3]))}");

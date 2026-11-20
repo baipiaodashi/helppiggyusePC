@@ -22,13 +22,13 @@ class H(BaseHTTPRequestHandler):
             sandbox = 'PIGGY_SANDBOX' in text
             if shell == 'pwsh':
                 if danger: cmd = "Remove-Item C:\\Windows\\System32\\drivers\\etc\\hosts -Force"
-                elif sandbox: cmd = "Set-Content -Path \"$env:USERPROFILE\\piggy-sandbox-probe.txt\" -Value hi; Write-Output wrote-outside-workspace"
+                elif sandbox: cmd = "Set-Content -Path \"C:\\piggy-sandbox-probe.txt\" -Value hi; Write-Output wrote-outside-workspace"
                 else: cmd = "Write-Output hello-from-harness; $PSVersionTable.PSVersion.ToString()"
             else:
                 if danger: cmd = "rm -rf /etc/hosts"
-                elif sandbox: cmd = "echo hi > \"$HOME/piggy-sandbox-probe.txt\" && echo wrote-outside-workspace"
+                elif sandbox: cmd = "echo hi > \"/opt/piggy-sandbox-probe.txt\" && echo wrote-outside-workspace"
                 else: cmd = "echo hello-from-harness && uname -a"
-            args = json.dumps({"command": cmd, "description": "delete hosts" if danger else ("write a file in the home folder" if sandbox else "print hello")})
+            args = json.dumps({"command": cmd, "description": "delete hosts" if danger else ("write a file outside the home folder" if sandbox else "print hello")})
             ev({"id": "x", "object": "chat.completion.chunk", "model": "fake-model", "choices": [{"index": 0, "delta": {"role": "assistant", "content": None, "tool_calls": [{"index": 0, "id": "call_1", "type": "function", "function": {"name": shell, "arguments": args}}]}, "finish_reason": None}]})
             ev({"id": "x", "object": "chat.completion.chunk", "model": "fake-model", "choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]})
         else:

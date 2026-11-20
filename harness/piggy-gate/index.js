@@ -8,7 +8,7 @@ const NO_ASK = new Set(['todo_write'])
 
 function denied(outcome) {
   const message = outcome === 'rejected'
-    ? 'The user said no to this action. Do not try it again or work around it; explain in plain words what the user can do instead.'
+    ? 'This action was not allowed: either the user said no, or Piggy\'s safety rules block it (formatting disks, changing system files or the registry, disabling security, downloading and running programs, etc.). Do not try it again or work around it; explain in plain words what the user can do instead.'
     : `This action was not approved (${outcome}). Do not retry it.`
   return { content: [{ type: 'text', text: 'Error: ' + message }], isError: true, error: { message, info: { name: 'PiggyGate', code: 'PIGGY_DENIED' } } }
 }

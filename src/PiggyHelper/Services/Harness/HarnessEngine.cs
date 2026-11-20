@@ -28,8 +28,18 @@ public static class HarnessEngine
     /// <summary>Harness 自己的数据目录（DSH_HOME）：配置、会话记录、闸门插件。</summary>
     public static string HomeDir => Path.Combine(AppData, "dsh-home");
 
-    /// <summary>AI 干活用的工作文件夹（不需要额外授权就能写的地方）。</summary>
-    public static string WorkspaceDir => Path.Combine(AppData, "workspace");
+    /// <summary>
+    /// AI 干活用的文件夹：用户自己的文件夹（桌面、文档、下载都在里面）。
+    /// 引擎的沙盒只允许改这里面的东西，Windows 系统文件夹和别的盘改不了；每一步还要用户点头。
+    /// </summary>
+    public static string WorkspaceDir
+    {
+        get
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return string.IsNullOrEmpty(home) ? Path.Combine(AppData, "workspace") : home;
+        }
+    }
 
     /// <summary>找到可用的引擎目录（里面有 node.exe 和 node_modules）。</summary>
     public static string? FindEngine()
@@ -251,5 +261,7 @@ public static class HarnessEngine
         "Never try to: format or partition disks, delete or modify system files (C:\\Windows, Program Files), edit the registry, disable antivirus or the firewall, " +
         "download and run programs, add users, change permissions, or run anything as administrator. Piggy blocks these automatically. " +
         "If the user refuses an action, do not retry it or look for a workaround; explain what they can do themselves instead. " +
-        "Commands must finish within 60 seconds and must not wait for input.";
+        "Commands must finish within 60 seconds and must not wait for input. " +
+        "Your working folder is the user's own home folder (Desktop, Documents, Downloads, Pictures are inside it); you can only change files there. " +
+        "When deleting the user's files, move them to the Recycle Bin instead of deleting permanently.";
 }

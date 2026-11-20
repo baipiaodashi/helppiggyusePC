@@ -142,6 +142,12 @@ public partial class AiPage
         var turn = _harnessTurn;
         if (turn == null || !Busy) return false;
         var card = ActionDescriber.Describe(call.ToolName, call.Input);
+        // 引擎自己的权限确认又问了一次同一步：卡片上已经写明要"跳出保护范围"、用户也同意了，就不重复问
+        if (call.Asks > 1 && call.Allowed && WantsEscalation(call) && card.Risk.Risk != CommandRisk.Block)
+        {
+            if (_harnessCards.TryGetValue(call.Id, out var existing)) existing.SetStatus("你同意了，正在用更大的权限运行……", "#2E8550", "\uE768");
+            return Busy;
+        }
         if (call.Asks > 1 && card.Risk.Risk != CommandRisk.Block)
             card = card with
             {
@@ -160,6 +166,12 @@ public partial class AiPage
         Track(view);
         var ok = await view.AskAsync();
         return ok && Busy;
+    }
+
+    private static bool WantsEscalation(HarnessToolCall call)
+    {
+        var p = call.Arg("sandbox_permissions");
+        return !string.IsNullOrWhiteSpace(p) && p != "use_default";
     }
 
     private void OnHarnessToolCall(HarnessToolCall call)

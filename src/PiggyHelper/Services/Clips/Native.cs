@@ -152,7 +152,7 @@ internal static class Native
     public const uint KEYEVENTF_EXTENDEDKEY = 0x1, KEYEVENTF_KEYUP = 0x2, KEYEVENTF_SCANCODE = 0x8;
 
     /// <summary>小猪自己模拟的按键都带这个记号（"PIGG"），键盘监听看到它就知道是自己发的。</summary>
-    public static readonly IntPtr PiggyInputTag = new(0x50494747);
+    public static readonly IntPtr PiggyInputTag = KeyboardHook.OwnInputTag;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct KEYBDINPUT

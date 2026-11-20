@@ -144,6 +144,9 @@ public static class ClipboardSelfTest
             // 14. 设置里不记录的软件
             Check("按软件名跳过", SourceApps.IsIgnored(@"C:\Program Files\KeePass\KeePass.exe", AppSettings.DefaultIgnoreApps)
                 && !SourceApps.IsIgnored(@"C:\Windows\notepad.exe", AppSettings.DefaultIgnoreApps));
+
+            // 15. Win+V 小窗口
+            await PanelTests(feature);
         }
         catch (Exception ex)
         {
@@ -152,12 +155,131 @@ public static class ClipboardSelfTest
         finally
         {
             try { feature?.Stop(); } catch { }
+            try { KeyboardHook.Shared.Stop(); } catch { }
             try { var log = Path.Combine(dir, "log.txt"); if (File.Exists(log)) Log("\n---- 剪贴板日志 ----\n" + File.ReadAllText(log)); } catch { }
             Log(_fails == 0 ? "\n全部通过" : $"\n失败 {_fails} 项");
             try { File.WriteAllText(reportPath, Report.ToString(), Encoding.UTF8); } catch { }
             try { Directory.Delete(dir, true); } catch { }
         }
         return _fails == 0 ? 0 : 1;
+    }
+
+    /// <summary>小窗口：打开不抢焦点、方向键选择、回车粘贴到原来的输入框、继续打字自动收起、Win+V 能打开。</summary>
+    private static async Task PanelTests(ClipboardFeature feature)
+    {
+        var store = feature.Store;
+        feature.Start(hotkeys: true);
+        Check("键盘监听启动", KeyboardHook.Shared.IsRunning);
+
+        // 一个带输入框的测试窗口，假装是用户正在打字的软件
+        var box = new System.Windows.Controls.TextBox { FontSize = 16 };
+        var win = new Window { Title = "小猪剪贴板自检 - 输入框", Width = 420, Height = 160, Left = 600, Top = 300, Content = box, Topmost = true };
+        win.Show();
+        win.Activate();
+        box.Focus();
+        await Task.Delay(400);
+        var winHwnd = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+        bool foreground = Native.GetForegroundWindow() == winHwnd;
+        Log("INFO 测试窗口在最前面：" + (foreground ? "是" : "否（CI 机器可能不让程序抢到前台，下面依赖它的项目只记 WARN）"));
+
+        var pasteText = "粘贴测试 " + Guid.NewGuid().ToString("N")[..6];
+        SetText(pasteText);
+        await WaitFor(store, x => x.Text == pasteText);
+        // 粘贴测试要等剪贴板换成别的内容，才能看出确实是小猪放回去的
+        SetText("别的内容 " + Guid.NewGuid().ToString("N")[..4]);
+        await WaitUntil(() => store.History.Items[0].Text.StartsWith("别的内容"));
+
+        var panel = feature.Panel;
+        panel.FollowForeground = false;
+        feature.ShowPanel(winHwnd);
+        await Task.Delay(300);
+        Check("小窗口能打开，列表和记录一致", panel.IsVisible && panel.Cards.Count == store.History.Count,
+            $"显示 {panel.IsVisible}，卡片 {panel.Cards.Count} 张，记录 {store.History.Count} 条");
+        if (foreground) Check("打开小窗口不抢焦点", Native.GetForegroundWindow() == winHwnd);
+        Check("打开时选中第一条", panel.SelectedIndex == 0);
+
+        // 方向键（模拟键盘监听转过来的按键）
+        bool swallowed = feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, true);
+        bool upSwallowed = feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, false);
+        await Task.Delay(150);
+        Check("↓ 键归小窗口用，并选中第二条", swallowed && upSwallowed && panel.SelectedIndex == 1, $"选中第 {panel.SelectedIndex + 1} 条");
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_RIGHT, true);
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_RIGHT, false);
+        await Task.Delay(150);
+        Check("→ 键切换到\"收藏\"", panel.Cards.All(c => c.Favorite) && panel.Cards.Count == store.History.Items.Count(x => x.Favorite));
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_LEFT, true);
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_LEFT, false);
+        await Task.Delay(150);
+
+        // 继续打字：小窗口收起，按键照常给原来的软件
+        bool typedSwallowed = feature.Hotkeys.Intercept(0x41, true);
+        feature.Hotkeys.Intercept(0x41, false);
+        await Task.Delay(150);
+        Check("小窗口开着时继续打字：按键不拦，小窗口收起", !typedSwallowed && !panel.IsVisible);
+
+        // Esc 关闭
+        feature.ShowPanel(winHwnd);
+        await Task.Delay(200);
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_ESCAPE, true);
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_ESCAPE, false);
+        await Task.Delay(150);
+        Check("Esc 关闭小窗口", !panel.IsVisible);
+        Check("小窗口关着时方向键不拦", !feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, true) & !feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, false));
+
+        // 回车粘贴到原来的输入框
+        win.Activate();
+        box.Focus();
+        await Task.Delay(300);
+        feature.ShowPanel(winHwnd);
+        await Task.Delay(200);
+        int idx = panel.Cards.ToList().FindIndex(c => c.Item.Text == pasteText);
+        for (int i = 0; i < idx; i++)
+        {
+            feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, true);
+            feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, false);
+        }
+        await Task.Delay(150);
+        ClipItem? pasted = null;
+        panel.Pasted += it => pasted = it;
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_RETURN, true);
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_RETURN, false);
+        await WaitUntil(() => pasted != null, 2000);
+        Check("回车：把选中的那条放进剪贴板、收起小窗口", pasted?.Text == pasteText && !panel.IsVisible
+            && System.Windows.Clipboard.GetText() == pasteText, pasted == null ? "没粘贴" : null);
+        Check("粘贴过的挪到最上面", store.History.Items[0].Text == pasteText);
+        await WaitUntil(() => box.Text.Contains(pasteText), 1500);
+        Soft("模拟 Ctrl+V，文字进了原来的输入框", box.Text.Contains(pasteText), foreground, $"输入框里是「{box.Text}」");
+
+        // 真的按 Win+V（模拟按键，不带小猪的记号）
+        box.Clear();
+        win.Activate();
+        await Task.Delay(300);
+        Native.Send(Native.Key(0x5B, false, IntPtr.Zero), Native.Key(0x56, false, IntPtr.Zero));
+        await Task.Delay(60);
+        Native.Send(Native.Key(0x56, true, IntPtr.Zero), Native.Key(0x5B, true, IntPtr.Zero));
+        await WaitUntil(() => panel.IsVisible, 1500);
+        bool opened = panel.IsVisible;
+        Soft("按 Win+V 打开小猪剪贴板", opened, true, "没有打开（这台机器可能不支持模拟按键）");
+        await Task.Delay(200);
+        Soft("Win+V 的 V 没有漏到输入框里", !box.Text.Contains('v') && !box.Text.Contains('V'), opened, $"输入框里是「{box.Text}」");
+        if (opened)
+        {
+            Native.Send(Native.Key(0x5B, false, IntPtr.Zero), Native.Key(0x56, false, IntPtr.Zero));
+            await Task.Delay(60);
+            Native.Send(Native.Key(0x56, true, IntPtr.Zero), Native.Key(0x5B, true, IntPtr.Zero));
+            await WaitUntil(() => !panel.IsVisible, 1500);
+            Soft("再按一次 Win+V 收起", !panel.IsVisible, true, "没有收起");
+        }
+        panel.HidePanel();
+        win.Close();
+    }
+
+    /// <summary>依赖"真的能模拟按键、窗口能到最前面"的检查：CI 机器上做不到时只记 WARN，不算失败。</summary>
+    private static void Soft(string name, bool ok, bool required, string? detail)
+    {
+        if (ok) Log("PASS " + name);
+        else if (required && Environment.GetEnvironmentVariable("PIGGY_STRICT_INPUT") == "1") Fail(name, detail);
+        else Log("WARN " + name + (detail == null ? "" : "：" + detail));
     }
 
     private static async Task CheckWriteBack(ClipboardStore store, ClipItem? item, string what)

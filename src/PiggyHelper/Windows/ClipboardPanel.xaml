@@ -1,0 +1,379 @@
+<Window x:Class="PiggyHelper.Windows.ClipboardPanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PiggyHelper.Controls"
+        xmlns:w="clr-namespace:PiggyHelper.Windows"
+        Title="小猪剪贴板" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        Width="440" Height="620" Left="-32000" Top="-32000"
+        FontFamily="{StaticResource UiFont}" Foreground="{StaticResource TextBrush}"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+    <!--
+        小猪剪贴板小窗口（Win+V）。参考了 Windows 自带的剪贴板面板和 EcoPaste：
+        顶上搜索 + 固定 + 设置，下面一排分类，再下面是一张张卡片，点一下就粘贴。
+        窗口不会抢走焦点：光标一直留在你原来打字的地方。
+    -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <DropShadowEffect x:Key="PanelShadow" BlurRadius="24" ShadowDepth="5" Direction="270"
+                          Opacity="0.22" Color="{StaticResource ShadowPinkColor}" />
+
+        <!-- 顶部小圆按钮（固定、设置） -->
+        <Style x:Key="HeadButton" TargetType="ToggleButton">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd" CornerRadius="14" Background="{StaticResource PinkSoftBrush}" Margin="6,0,0,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkLightBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource PinkDeepBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 搜索框：小一号的圆角搜索框 -->
+        <Style x:Key="ClipSearch" TargetType="TextBox">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="CaretBrush" Value="{StaticResource PinkDeepBrush}" />
+            <Setter Property="SelectionBrush" Value="{StaticResource PinkBrush}" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="IBeam" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Bd" Background="#FFF7FA" CornerRadius="14"
+                                BorderBrush="{StaticResource LineBrush}" BorderThickness="2" Padding="12,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                           Foreground="{StaticResource PinkBrush}" VerticalAlignment="Center" Margin="0,0,9,0" />
+                                <TextBlock x:Name="Placeholder" Grid.Column="1" Text="{TemplateBinding Tag}"
+                                           Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center" Visibility="Collapsed"
+                                           IsHitTestVisible="False" TextTrimming="CharacterEllipsis" />
+                                <ScrollViewer x:Name="PART_ContentHost" Grid.Column="1" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PinkLightBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PinkBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 分类标签：图标 + 两个字 -->
+        <Style x:Key="ClipTab" TargetType="RadioButton">
+            <Setter Property="GroupName" Value="ClipTabs" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" CornerRadius="12" Background="Transparent" Padding="10,6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{TemplateBinding Tag}" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                           FontWeight="Normal" VerticalAlignment="Center" Margin="0,1,6,0" />
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkSoftBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource PinkDeepBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 卡片右上角的小按钮（收藏、纯文字、打开、删除） -->
+        <Style x:Key="CardAction" TargetType="Button">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="10" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1.5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkSoftBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PinkLightBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource PinkDeepBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="DangerAction" TargetType="Button" BasedOn="{StaticResource CardAction}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="10" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1.5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF6B8E" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FF6B8E" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 一张卡片 -->
+        <Style x:Key="CardItem" TargetType="ListBoxItem">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <EventSetter Event="MouseLeftButtonUp" Handler="OnCardClick" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="16" Background="White" BorderThickness="2"
+                                    BorderBrush="{StaticResource LineBrush}" Padding="12,9,12,11">
+                                <ContentPresenter />
+                            </Border>
+                            <!-- 鼠标移上去 / 键盘选中时才出现的小按钮 -->
+                            <StackPanel x:Name="Actions" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Margin="0,7,9,0" Visibility="Collapsed">
+                                <Button Style="{StaticResource CardAction}" Content="&#xE7B3;" ToolTip="显示 / 隐藏内容"
+                                        Click="OnRevealClick" Visibility="{Binding Item.Sensitive, Converter={StaticResource BoolToVis}}" />
+                                <Button Style="{StaticResource CardAction}" Content="Aa" FontFamily="{StaticResource UiFont}" FontWeight="Bold" FontSize="11"
+                                        ToolTip="{Binding PlainTip}" Click="OnPlainClick"
+                                        Visibility="{Binding CanPastePlain, Converter={StaticResource BoolToVis}}" />
+                                <Button Style="{StaticResource CardAction}" Content="&#xE8A7;" ToolTip="{Binding OpenTip}" Click="OnOpenClick"
+                                        Visibility="{Binding CanOpen, Converter={StaticResource BoolToVis}}" />
+                                <Button x:Name="FavButton" Style="{StaticResource CardAction}" Content="&#xE734;" ToolTip="收藏（一直留着，清空时也不删）"
+                                        Click="OnFavoriteClick" />
+                                <Button Style="{StaticResource DangerAction}" Content="&#xE74D;" ToolTip="删掉这一条" Click="OnDeleteClick" />
+                            </StackPanel>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Favorite}" Value="True">
+                                <Setter TargetName="FavButton" Property="Content" Value="&#xE735;" />
+                                <Setter TargetName="FavButton" Property="Foreground" Value="#FFB020" />
+                                <Setter TargetName="FavButton" Property="ToolTip" Value="取消收藏" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PinkLightBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="#FFFBFC" />
+                                <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PinkBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="#FFF5F9" />
+                                <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="CardTemplate" DataType="{x:Type w:ClipCardVm}">
+            <StackPanel>
+                <!-- 第一行：来自哪个软件 · 多久以前 · 收藏星星 -->
+                <DockPanel Height="22" Margin="0,0,0,5">
+                    <TextBlock DockPanel.Dock="Right" Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                               Foreground="#FFB020" VerticalAlignment="Center"
+                               Visibility="{Binding Favorite, Converter={StaticResource BoolToVis}}" />
+                    <Image Source="{Binding SourceIcon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Visibility="{Binding HasSourceIcon, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis">
+                        <Run Text="{Binding SourceName, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource SubTextBrush}" />
+                        <Run Text=" · " Foreground="{StaticResource FaintTextBrush}" />
+                        <Run Text="{Binding TimeText, Mode=OneWay}" Foreground="{StaticResource FaintTextBrush}" />
+                    </TextBlock>
+                </DockPanel>
+
+                <!-- 文字 -->
+                <StackPanel Visibility="{Binding IsText, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Border Width="20" Height="20" CornerRadius="6" Margin="0,0,7,0" Background="{Binding ColorSwatch}"
+                                BorderBrush="#22000000" BorderThickness="1" VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ColorSwatch}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                        <Border CornerRadius="7" Background="#EAF3FF" Padding="7,1" VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Badge}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding Badge}" FontSize="11" FontWeight="Bold" Foreground="#3B82D6" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock x:Name="TextPreview" Text="{Binding Preview}" FontSize="14" LineHeight="20" TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis" MaxHeight="80" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" Visibility="{Binding Masked, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="&#xE72E;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="{StaticResource FaintTextBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <TextBlock Text="{Binding SensitiveNote}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 图片 -->
+                <StackPanel Visibility="{Binding IsImage, Converter={StaticResource BoolToVis}}">
+                    <Border Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" CornerRadius="10" HorizontalAlignment="Left"
+                            Background="#F6EEF2" BorderBrush="#14000000" BorderThickness="1">
+                        <Border CornerRadius="9">
+                            <Border.Background>
+                                <ImageBrush ImageSource="{Binding Thumb}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                            </Border.Background>
+                        </Border>
+                    </Border>
+                    <TextBlock Text="{Binding ImageInfo}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" Margin="0,5,0,0" />
+                </StackPanel>
+
+                <!-- 文件 -->
+                <DockPanel Visibility="{Binding IsFiles, Converter={StaticResource BoolToVis}}">
+                    <Grid Width="40" Height="40" DockPanel.Dock="Left" Margin="0,0,10,0">
+                        <Border CornerRadius="12" Background="#FFE9B8" />
+                        <TextBlock Text="{Binding FilesGlyph}" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="#D98A1C"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding FilesTitle}" FontSize="14" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding FilesSub}" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding SubKind}" Value="link">
+                    <Setter TargetName="TextPreview" Property="Foreground" Value="#2F6FD0" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Masked}" Value="True">
+                    <Setter TargetName="TextPreview" Property="Foreground" Value="{StaticResource SubTextBrush}" />
+                    <Setter TargetName="TextPreview" Property="FontFamily" Value="Consolas, Microsoft YaHei UI" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid x:Name="Root" Margin="20" Opacity="0" RenderTransformOrigin="0.5,0">
+        <Grid.RenderTransform>
+            <TranslateTransform x:Name="Shift" />
+        </Grid.RenderTransform>
+        <Border CornerRadius="26" Background="#FFFDFE" Effect="{StaticResource PanelShadow}" />
+        <Border CornerRadius="26" BorderBrush="{StaticResource PinkLightBrush}" BorderThickness="2.5">
+            <DockPanel Margin="14,14,14,10">
+                <!-- 顶部：小猪 + 搜索 + 固定 + 设置 -->
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <ToggleButton x:Name="SettingsButton" DockPanel.Dock="Right" Style="{StaticResource HeadButton}" Content="&#xE713;"
+                                  ToolTip="剪贴板设置（打开小猪主窗口）" Click="OnSettingsClick" />
+                    <ToggleButton x:Name="PinButton" DockPanel.Dock="Right" Style="{StaticResource HeadButton}" Content="&#xE718;"
+                                  ToolTip="固定小窗口：粘贴以后不自动收起" Click="OnPinClick" />
+                    <controls:PiggyMascot DockPanel.Dock="Left" Width="40" Height="40" Pose="face" Animated="False" Margin="-2,0,6,0" />
+                    <TextBox x:Name="Search" Style="{StaticResource ClipSearch}" Tag="搜索剪贴板…"
+                             PreviewMouseLeftButtonDown="OnSearchMouseDown" TextChanged="OnSearchChanged" />
+                </DockPanel>
+
+                <!-- 分类 -->
+                <StackPanel x:Name="Tabs" DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                    <RadioButton x:Name="TabAll" Style="{StaticResource ClipTab}" Tag="&#xE71D;" Content="全部" IsChecked="True" Checked="OnTabChecked" />
+                    <RadioButton x:Name="TabFav" Style="{StaticResource ClipTab}" Tag="&#xE734;" Content="收藏" Checked="OnTabChecked" />
+                    <RadioButton x:Name="TabText" Style="{StaticResource ClipTab}" Tag="&#xE8D2;" Content="文字" Checked="OnTabChecked" />
+                    <RadioButton x:Name="TabImage" Style="{StaticResource ClipTab}" Tag="&#xEB9F;" Content="图片" Checked="OnTabChecked" />
+                    <RadioButton x:Name="TabFiles" Style="{StaticResource ClipTab}" Tag="&#xE8B7;" Content="文件" Checked="OnTabChecked" />
+                </StackPanel>
+
+                <!-- 底部提示 -->
+                <Grid DockPanel.Dock="Bottom" Margin="4,8,4,0" Height="20">
+                    <TextBlock x:Name="Hint" FontSize="11.5" Foreground="{StaticResource FaintTextBrush}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis">
+                        <Run Text="↑↓ 选择" /><Run Text="   回车 粘贴" /><Run Text="   Shift+回车 纯文字" /><Run Text="   Esc 关闭" />
+                    </TextBlock>
+                    <TextBlock x:Name="Toast" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PinkDeepBrush}"
+                               VerticalAlignment="Center" Visibility="Collapsed" TextTrimming="CharacterEllipsis" />
+                </Grid>
+
+                <!-- 卡片列表 -->
+                <Grid>
+                    <ListBox x:Name="List" Focusable="False" Background="Transparent" BorderThickness="0" Padding="0"
+                             ItemContainerStyle="{StaticResource CardItem}" ItemTemplate="{StaticResource CardTemplate}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                             VirtualizingPanel.ScrollUnit="Pixel" SelectionMode="Single" />
+
+                    <!-- 空的时候：小猪 -->
+                    <StackPanel x:Name="Empty" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0,20,30"
+                                Visibility="Collapsed">
+                        <controls:PiggyMascot x:Name="EmptyPig" Width="130" Height="130" Pose="clip" />
+                        <TextBlock x:Name="EmptyTitle" Text="还没有复制过东西" FontSize="16" FontWeight="Bold"
+                                   HorizontalAlignment="Center" Margin="0,10,0,0" />
+                        <TextBlock x:Name="EmptyText" FontSize="13" Foreground="{StaticResource SubTextBrush}" TextAlignment="Center"
+                                   TextWrapping="Wrap" LineHeight="20" Margin="0,6,0,0" MaxWidth="280"
+                                   Text="选中文字或图片，按 Ctrl+C 复制，就会出现在这里。下次按 Win+V，点一下就能粘贴。" />
+                    </StackPanel>
+                </Grid>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

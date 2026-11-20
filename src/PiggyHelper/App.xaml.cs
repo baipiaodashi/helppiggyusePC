@@ -117,6 +117,11 @@ public partial class App : Application
             try
             {
                 _clipboard = new ClipboardFeature();
+                _clipboard.OpenManagerRequested += () =>
+                {
+                    ShowMainWindow();
+                    _main?.Navigate("clipboard");
+                };
                 _clipboard.Start();
             }
             catch (Exception ex) { ClipLog.Error("启动小猪剪贴板", ex); }
@@ -124,11 +129,16 @@ public partial class App : Application
 
         _main = new MainWindow();
         if (!minimized) _main.Show();
-        if (startPage != null && startPage != "overlay") _main.Navigate(startPage, query);
+        if (startPage != null && startPage != "overlay" && !startPage.StartsWith("clip-")) _main.Navigate(startPage, query);
         if (!smokeTest && _overlay != null)
         {
             var overlay = _overlay;
             Dispatcher.BeginInvoke(() => { try { overlay.Prewarm(); } catch { } }, DispatcherPriority.ApplicationIdle);
+        }
+        if (!smokeTest && _clipboard != null)
+        {
+            var clip = _clipboard;
+            Dispatcher.BeginInvoke(() => clip.Prewarm(), DispatcherPriority.ApplicationIdle);
         }
 
         if (smokeTest)
@@ -139,6 +149,17 @@ public partial class App : Application
                 _overlay = ShortcutOverlay.Shared;
                 _overlay.ShowFor("Ctrl");
                 target = _overlay;
+            }
+            else if (startPage is "clip-panel" or "clip-empty")
+            {
+                // 剪贴板小窗口截图：用临时文件夹里的示例记录
+                var dir = Path.Combine(Path.GetTempPath(), "PiggyClipShot-" + Guid.NewGuid().ToString("N")[..8]);
+                var feature = new ClipboardFeature(dir);
+                if (startPage == "clip-panel") ClipDemo.Fill(feature.Store);
+                var panel = feature.Panel;
+                panel.ShowForScreenshot();
+                if (!string.IsNullOrEmpty(query)) panel.SetSearch(query);
+                target = panel;
             }
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_screenshotDelay) };
             timer.Tick += (_, _) =>
@@ -216,6 +237,7 @@ public partial class App : Application
         try { _main?.ShutdownAgents(); } catch { }
         try { _clipboard?.Stop(); } catch { }
         _hold?.Dispose();
+        KeyboardHook.Shared.Dispose();
         Tray?.Dispose();
         ReleaseSingleInstance();
         base.OnExit(e);

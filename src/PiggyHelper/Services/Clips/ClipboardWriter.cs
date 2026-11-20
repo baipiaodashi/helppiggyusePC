@@ -130,4 +130,17 @@ public static class ClipboardWriter
         ClipLog.Write("写剪贴板失败：一直被别的软件占着");
         return Result.Failed;
     }
+
+    /// <summary>模拟按一下 Ctrl+V。用户还按着 Shift 的话先松开它，免得变成 Ctrl+Shift+V。</summary>
+    public static void SendPasteKeys()
+    {
+        var keys = new List<Native.INPUT>();
+        foreach (int vk in new[] { 0xA0, 0xA1 })
+            if (Native.IsDown(vk)) keys.Add(Native.Key((ushort)vk, true));
+        keys.Add(Native.Key(0x11, false));
+        keys.Add(Native.Key(0x56, false));
+        keys.Add(Native.Key(0x56, true));
+        keys.Add(Native.Key(0x11, true));
+        Native.Send(keys.ToArray());
+    }
 }

@@ -82,6 +82,11 @@ public sealed class AcpClient : IAsyncDisposable
         psi.Environment["DSH_PERMISSION_MODE"] = "workspace-write";
         psi.Environment["NO_PROXY"] = "127.0.0.1,localhost";
         psi.Environment.Remove("NODE_OPTIONS");
+        if (HarnessEngine.TempDir is { } tmp)
+        {
+            psi.Environment["TEMP"] = tmp;
+            psi.Environment["TMP"] = tmp;
+        }
 
         _proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
         _proc.ErrorDataReceived += (_, e) =>

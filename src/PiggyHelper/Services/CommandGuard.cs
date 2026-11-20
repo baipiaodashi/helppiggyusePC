@@ -29,6 +29,8 @@ public static class CommandGuard
     // ---------- 直接拦下 ----------
     private static readonly (Regex Pattern, string Reason)[] BlockRules =
     {
+        // 小猪自己的引擎和安全闸门：AI 不许碰
+        (new(@"piggyhelper[\\/](?:harness|dsh-home|settings\.json)|piggy-gate|cordis\.patch", Opt), "会改动小猪自己的安全设置"),
         (new($@"{Word("format")}(?:\.com)?\s+[a-z]:", Opt), "会格式化磁盘，里面的东西会全部没有"),
         (new(Word("format-volume|clear-disk|initialize-disk|remove-partition|set-partition|resize-partition|new-partition|diskpart|mountvol"), Opt), "会改动硬盘分区，可能把整个盘的数据弄没"),
         (new(Word("bcdedit|bootrec|bcdboot|bootsect"), Opt), "会改动开机引导，电脑可能开不了机"),
@@ -125,6 +127,7 @@ public static class CommandGuard
         if (string.IsNullOrWhiteSpace(path)) return new(CommandRisk.Block, "没有说清楚要改哪个文件");
         var flat = Normalize(path) + " ";
         if (SystemPath.IsMatch(flat)) return new(CommandRisk.Block, "要改的是系统文件，电脑可能坏掉");
+        if (Regex.IsMatch(flat, @"piggyhelper[\\/](?:harness|dsh-home|settings\.json)|piggy-gate|cordis\.patch", Opt)) return new(CommandRisk.Block, "要改的是小猪自己的安全设置");
         if (DriveRoot.IsMatch(Normalize(path))) return new(CommandRisk.Block, "要改的是整个磁盘");
         if (Regex.IsMatch(flat, @"^\\\\[.?]\\|\\appdata\\roaming\\microsoft\\windows\\start menu\\programs\\startup", Opt))
             return new(CommandRisk.Block, "要改的地方会影响开机启动或系统设备");

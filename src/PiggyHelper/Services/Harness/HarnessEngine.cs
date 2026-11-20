@@ -32,14 +32,36 @@ public static class HarnessEngine
     /// AI 干活用的文件夹：用户自己的文件夹（桌面、文档、下载都在里面）。
     /// 引擎的沙盒只允许改这里面的东西，Windows 系统文件夹和别的盘改不了；每一步还要用户点头。
     /// </summary>
-    public static string WorkspaceDir
+    public static string WorkspaceDir => Dirs.Value.Workspace;
+
+    /// <summary>
+    /// 给引擎用的临时文件夹。Windows 上的沙盒要求临时文件夹不能在工作文件夹里面，
+    /// 而系统默认的 Temp 在用户文件夹里，所以换到"公用"文件夹下。为 null 时用系统默认的。
+    /// </summary>
+    public static string? TempDir => Dirs.Value.Temp;
+
+    private static readonly Lazy<(string Workspace, string? Temp)> Dirs = new(() =>
     {
-        get
+        var fallback = Path.Combine(AppData, "workspace");
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrEmpty(home)) return (fallback, null);
+        if (!OperatingSystem.IsWindows()) return (home, null);
+        try
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            return string.IsNullOrEmpty(home) ? Path.Combine(AppData, "workspace") : home;
+            var pub = Environment.GetEnvironmentVariable("PUBLIC");
+            if (string.IsNullOrEmpty(pub)) pub = Path.Combine(Path.GetDirectoryName(home.TrimEnd('\\')) ?? @"C:\Users", "Public");
+            var tmp = Path.Combine(pub, "PiggyHelper", "temp-" + Environment.UserName);
+            Directory.CreateDirectory(tmp);
+            var full = Path.GetFullPath(tmp);
+            if (full.StartsWith(Path.GetFullPath(home).TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)) return (fallback, null);
+            return (home, full);
         }
-    }
+        catch
+        {
+            // 公用文件夹用不了：退回小猪自己的工作文件夹（改桌面上的文件时，引擎会再申请一次权限）
+            return (fallback, null);
+        }
+    });
 
     /// <summary>找到可用的引擎目录（里面有 node.exe 和 node_modules）。</summary>
     public static string? FindEngine()

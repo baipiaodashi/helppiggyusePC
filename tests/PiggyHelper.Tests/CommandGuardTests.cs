@@ -7,6 +7,8 @@ public class CommandGuardTests
     // 格式化、分区、引导
     [InlineData("format c:")]
     [InlineData("rm -rf /etc/hosts")]
+    [InlineData(@"Set-Content $env:LOCALAPPDATA\PiggyHelper\dsh-home\node_modules\piggy-gate\index.js 'x'")]
+    [InlineData(@"Get-ChildItem C:\Users\a\AppData\Local\PiggyHelper\harness -Recurse | Remove-Item")]
     [InlineData("rm -rf /")]
     [InlineData("rm -rf /*")]
     [InlineData("format D: /q")]
@@ -118,6 +120,8 @@ public class WritePathTests
 {
     [Theory]
     [InlineData(@"C:\Windows\System32\drivers\etc\hosts")]
+    [InlineData(@"C:\Users\a\AppData\Local\PiggyHelper\dsh-home\cordis.patch.yml")]
+    [InlineData(@"C:\Users\a\AppData\Roaming\PiggyHelper\settings.json")]
     [InlineData(@"C:\Program Files\Tencent\WeChat\WeChat.exe")]
     [InlineData(@"C:\")]
     [InlineData(@"C:\Users\me\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\a.txt")]

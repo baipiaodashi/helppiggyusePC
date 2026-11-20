@@ -1,0 +1,413 @@
+<UserControl x:Class="PiggyHelper.Pages.ClipboardPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PiggyHelper.Controls">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="RowTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style x:Key="RowDesc" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="LineHeight" Value="19" />
+        </Style>
+        <Style x:Key="Divider" TargetType="Border">
+            <Setter Property="Height" Value="2" />
+            <Setter Property="Background" Value="{StaticResource LineBrush}" />
+            <Setter Property="Margin" Value="0,16" />
+            <Setter Property="CornerRadius" Value="1" />
+        </Style>
+        <Style x:Key="KeyText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="Plus" TargetType="TextBlock">
+            <Setter Property="Text" Value="+" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource FaintTextBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+        <!-- 小提示块：一串键帽 + 一句话 -->
+        <Style x:Key="TipBlock" TargetType="Border">
+            <Setter Property="Background" Value="#FFF7F0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16,14" />
+        </Style>
+        <Style x:Key="TipText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="19" />
+            <Setter Property="Margin" Value="0,10,0,0" />
+        </Style>
+        <!-- 统计小胶囊 -->
+        <Style x:Key="StatPill" TargetType="Border">
+            <Setter Property="Background" Value="#B3FFFFFF" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+        </Style>
+        <!-- 软件小胶囊上的 ✕ / + 按钮 -->
+        <Style x:Key="ChipButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Width="24" Height="24" CornerRadius="12" Background="Transparent">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                       Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkLightBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource PinkDeepBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 可以点的"添加这个软件"胶囊 -->
+        <Style x:Key="AddChip" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="White" CornerRadius="14" BorderThickness="2" BorderBrush="{StaticResource LineBrush}"
+                                Padding="8,5,12,5">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PinkBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkSoftBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 软件图标（拿不到图标时显示一个方块） -->
+        <DataTemplate x:Key="AppIcon">
+            <Grid Width="20" Height="20">
+                <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="14" Foreground="{StaticResource FaintTextBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Image Source="{Binding Icon}" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="20,4,36,36">
+            <StackPanel Margin="4,8,0,0">
+                <TextBlock Text="小猪剪贴板" Style="{StaticResource PageTitle}" />
+                <TextBlock Text="复制过的文字、图片、文件，小猪都帮你记着。在任何软件里按 Win+V，点一下就能粘贴回去。" Style="{StaticResource PageSubtitle}" />
+            </StackPanel>
+
+            <!-- ===== 大卡片：Win+V ===== -->
+            <ContentControl Style="{StaticResource Card}" Padding="26,22,28,22" Margin="0,18,0,0">
+                <ContentControl.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FFF1E2" Offset="0" />
+                        <GradientStop Color="#FFE6EF" Offset="1" />
+                    </LinearGradientBrush>
+                </ContentControl.Background>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <controls:PiggyMascot Width="138" Height="138" Margin="-10,-12,18,-12" VerticalAlignment="Center" Pose="clip" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <WrapPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,14,6" VerticalAlignment="Center">
+                                <Border Style="{StaticResource Keycap}" Padding="14,6" MinWidth="58" BorderBrush="#F2C3A0">
+                                    <TextBlock Text="Win" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="+" FontSize="20" FontWeight="Bold" Foreground="#E3A47A" VerticalAlignment="Center" Margin="2,0,8,0" />
+                                <Border Style="{StaticResource Keycap}" Padding="14,6" MinWidth="50" BorderBrush="#F2C3A0">
+                                    <TextBlock Text="V" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+                                </Border>
+                            </StackPanel>
+                            <Border x:Name="StatusPill" CornerRadius="13" Padding="12,5" Background="#DDF5E8" VerticalAlignment="Center" Margin="0,0,0,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="StatusDot" Width="9" Height="9" Fill="#2E9E70" VerticalAlignment="Center" Margin="0,0,7,0" />
+                                    <TextBlock x:Name="StatusText" Text="正在记录" FontSize="13" FontWeight="Bold" Foreground="#23845C" />
+                                </StackPanel>
+                            </Border>
+                        </WrapPanel>
+                        <TextBlock x:Name="HeroText" FontSize="15" TextWrapping="Wrap" LineHeight="23" Margin="0,8,0,0"
+                                   Text="在任何软件里打字时按一下，光标旁边就会弹出小窗口。用 ↑ ↓ 选一条，按回车或者用鼠标点一下，就粘贴进去了。" />
+                        <WrapPanel Margin="0,14,0,0">
+                            <Button x:Name="OpenNowButton" Style="{StaticResource PillButton}" Content="现在打开看看" Height="46" FontSize="15"
+                                    Background="#FF9A57" BorderBrush="#E07B39" Margin="0,0,16,10" Click="OnOpenNowClick" />
+                            <Border Style="{StaticResource StatPill}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="#E07B39"
+                                               VerticalAlignment="Center" Margin="0,0,7,0" />
+                                    <TextBlock x:Name="CountText" Text="记了 0 条" FontSize="13" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatPill}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="#F5A524"
+                                               VerticalAlignment="Center" Margin="0,0,7,0" />
+                                    <TextBlock x:Name="FavText" Text="收藏 0 条" FontSize="13" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatPill}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8B7;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{StaticResource PinkDeepBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,7,0" />
+                                    <TextBlock x:Name="UsageText" Text="占用 …" FontSize="13" FontWeight="Bold" />
+                                </StackPanel>
+                            </Border>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </ContentControl>
+
+            <!-- ===== 出问题时的提醒 ===== -->
+            <ContentControl x:Name="WarnCard" Style="{StaticResource Card}" Background="#FFF4D6" Padding="22,16" Margin="0,18,0,0"
+                            Visibility="Collapsed">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="#C98A12"
+                               VerticalAlignment="Top" Margin="0,2,14,0" />
+                    <StackPanel>
+                        <TextBlock x:Name="WarnTitle" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" />
+                        <TextBlock x:Name="WarnText" Style="{StaticResource RowDesc}" />
+                    </StackPanel>
+                </DockPanel>
+            </ContentControl>
+
+            <!-- ===== 小窗口里怎么用 ===== -->
+            <TextBlock Text="小窗口里怎么用" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
+            <ContentControl Style="{StaticResource Card}" Padding="20,20,20,8">
+                <controls:AdaptiveGrid MinItemWidth="200" MaxColumns="3" Spacing="12">
+                    <Border Style="{StaticResource TipBlock}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="↑" Style="{StaticResource KeyText}" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="↓" Style="{StaticResource KeyText}" /></Border>
+                            </StackPanel>
+                            <TextBlock Text="上下选一条。光标还留在原来的地方，不用担心打乱。" Style="{StaticResource TipText}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource TipBlock}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Enter" Style="{StaticResource KeyText}" /></Border>
+                            </StackPanel>
+                            <TextBlock Text="粘贴选中的那条。用鼠标点一下卡片也一样。" Style="{StaticResource TipText}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource TipBlock}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Shift" Style="{StaticResource KeyText}" /></Border>
+                                <TextBlock Style="{StaticResource Plus}" />
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="Enter" Style="{StaticResource KeyText}" /></Border>
+                            </StackPanel>
+                            <TextBlock Text="只粘贴文字，不带网页、Word 里的颜色和字号。" Style="{StaticResource TipText}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource TipBlock}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="←" Style="{StaticResource KeyText}" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Text="→" Style="{StaticResource KeyText}" /></Border>
+                            </StackPanel>
+                            <TextBlock Text="换分类：全部、收藏、文字、图片、文件。" Style="{StaticResource TipText}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource TipBlock}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Keycap}">
+                                    <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" Style="{StaticResource KeyText}" Margin="0,3,0,2" />
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="点一下搜索框就能打字找，比如搜&#x201C;作业&#x201D;&#x201C;图片&#x201D;&#x201C;网址&#x201D;。" Style="{StaticResource TipText}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource TipBlock}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Keycap}">
+                                    <TextBlock Text="&#xE734;" FontFamily="{StaticResource IconFont}" Style="{StaticResource KeyText}" Margin="0,3,0,2" />
+                                </Border>
+                                <Border Style="{StaticResource Keycap}">
+                                    <TextBlock Text="&#xE718;" FontFamily="{StaticResource IconFont}" Style="{StaticResource KeyText}" Margin="0,3,0,2" />
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="常用的点星星收藏，一直留着；点图钉把小窗口固定住，连着粘贴好几条。" Style="{StaticResource TipText}" />
+                        </StackPanel>
+                    </Border>
+                </controls:AdaptiveGrid>
+            </ContentControl>
+
+            <!-- ===== 开关 ===== -->
+            <TextBlock Text="开关" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
+            <ContentControl Style="{StaticResource Card}" Padding="24,20">
+                <StackPanel>
+                    <DockPanel>
+                        <CheckBox x:Name="EnabledSwitch" DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" VerticalAlignment="Center"
+                                  Checked="OnSwitchChanged" Unchecked="OnSwitchChanged" />
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="记下复制的内容" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="开着时，复制的文字、图片、文件都会记下来。关掉以后不再记新的，已经记下的还在。" Style="{StaticResource RowDesc}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Style="{StaticResource Divider}" />
+                    <DockPanel>
+                        <CheckBox x:Name="WinVSwitch" DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" VerticalAlignment="Center"
+                                  Checked="OnSwitchChanged" Unchecked="OnSwitchChanged" />
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="按 Win+V 打开小猪剪贴板" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="关掉以后，Win+V 打开的是 Windows 自带的剪贴板。小猪剪贴板还可以从右下角托盘里的小猪图标打开。" Style="{StaticResource RowDesc}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Style="{StaticResource Divider}" />
+                    <DockPanel>
+                        <CheckBox x:Name="SensitiveSwitch" DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" VerticalAlignment="Center"
+                                  Checked="OnSwitchChanged" Unchecked="OnSwitchChanged" />
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="像密码的内容干脆不记" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="复制的内容像密码、密钥、身份证号、银行卡号时：开着就完全不记；关着会记下来，但显示时打码，保存时加密。" Style="{StaticResource RowDesc}" />
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </ContentControl>
+
+            <!-- ===== 记多少 ===== -->
+            <TextBlock Text="记多少" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
+            <ContentControl Style="{StaticResource Card}" Padding="24,20,24,12">
+                <StackPanel>
+                    <TextBlock Text="最多记几条" Style="{StaticResource RowTitle}" />
+                    <WrapPanel Margin="0,12,0,0">
+                        <RadioButton x:Name="Max100" Style="{StaticResource CategoryPill}" GroupName="ClipMax" Content="100 条" Tag="100" Checked="OnLimitChecked" />
+                        <RadioButton x:Name="Max300" Style="{StaticResource CategoryPill}" GroupName="ClipMax" Content="300 条（推荐）" Tag="300" Checked="OnLimitChecked" />
+                        <RadioButton x:Name="Max1000" Style="{StaticResource CategoryPill}" GroupName="ClipMax" Content="1000 条" Tag="1000" Checked="OnLimitChecked" />
+                    </WrapPanel>
+                    <Border Style="{StaticResource Divider}" Margin="0,8,0,16" />
+                    <TextBlock Text="留多久" Style="{StaticResource RowTitle}" />
+                    <WrapPanel Margin="0,12,0,0">
+                        <RadioButton x:Name="Keep1" Style="{StaticResource CategoryPill}" GroupName="ClipKeep" Content="1 天" Tag="1" Checked="OnLimitChecked" />
+                        <RadioButton x:Name="Keep7" Style="{StaticResource CategoryPill}" GroupName="ClipKeep" Content="7 天" Tag="7" Checked="OnLimitChecked" />
+                        <RadioButton x:Name="Keep30" Style="{StaticResource CategoryPill}" GroupName="ClipKeep" Content="30 天（推荐）" Tag="30" Checked="OnLimitChecked" />
+                        <RadioButton x:Name="Keep0" Style="{StaticResource CategoryPill}" GroupName="ClipKeep" Content="一直留着" Tag="0" Checked="OnLimitChecked" />
+                    </WrapPanel>
+                    <TextBlock Text="超出的旧记录会自动删掉（按最后一次用的时间算）。收藏的不算在里面，一直留着。" Style="{StaticResource RowDesc}" Margin="0,2,0,8" />
+                </StackPanel>
+            </ContentControl>
+
+            <!-- ===== 不记录的软件 ===== -->
+            <TextBlock Text="这些软件里复制的不记" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
+            <ContentControl Style="{StaticResource Card}" Padding="24,20,24,14">
+                <StackPanel>
+                    <TextBlock Text="比如密码管理器里复制的密码，小猪一律不记。点 ✕ 可以去掉，也可以加上别的软件。" Style="{StaticResource RowDesc}" Margin="0,0,0,14" />
+                    <ItemsControl x:Name="IgnoreList" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource PinkSoftBrush}" CornerRadius="14" Padding="10,5,5,5" Margin="0,0,10,10"
+                                        ToolTip="{Binding File}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AppIcon}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="8,0,2,0" />
+                                        <Button Style="{StaticResource ChipButton}" Content="&#xE711;" ToolTip="去掉：以后在这个软件里复制的也记下来"
+                                                Click="OnRemoveIgnoreClick" Margin="2,0,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="IgnoreEmpty" Text="现在每个软件里复制的都会记下来。" FontSize="13" Foreground="{StaticResource FaintTextBrush}"
+                               Margin="0,0,0,10" Visibility="Collapsed" />
+
+                    <StackPanel x:Name="RecentBlock">
+                        <Border Style="{StaticResource Divider}" Margin="0,6,0,14" />
+                        <TextBlock Text="最近在这些软件里复制过，点一下就不记它了：" FontSize="13" FontWeight="Bold" Foreground="{StaticResource SubTextBrush}"
+                                   Margin="0,0,0,12" />
+                        <ItemsControl x:Name="RecentList" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource AddChip}" Click="OnAddRecentClick" ToolTip="{Binding File}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="{StaticResource PinkDeepBrush}"
+                                                       VerticalAlignment="Center" Margin="2,0,8,0" />
+                                            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource AppIcon}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="-10,0,0,0" Click="OnPickAppClick">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8E5;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="从电脑里选一个软件……" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </ContentControl>
+
+            <!-- ===== 记录存在哪 ===== -->
+            <TextBlock Text="记录存在哪" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
+            <ContentControl Style="{StaticResource Card}" Padding="24,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Width="54" Height="54" Margin="0,0,16,0" VerticalAlignment="Top">
+                        <Border CornerRadius="18">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#9CD9B9" Offset="0" />
+                                    <GradientStop Color="#4DB88A" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border CornerRadius="18" Background="{StaticResource ClayHighlight}" />
+                        <TextBlock Text="&#xE72E;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="只存在这台电脑上，不会上传到网上" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="像密码的内容会打码显示、加密保存，换一台电脑或者换个账号都打不开。" Style="{StaticResource RowDesc}" />
+                        <TextBlock x:Name="DirText" FontSize="12" Foreground="{StaticResource FaintTextBrush}" Margin="0,6,0,0"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <WrapPanel Grid.Column="2" VerticalAlignment="Center" Margin="16,0,0,0" MaxWidth="300" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource GhostButton}" Content="打开文件夹" Margin="0,4,10,4" Click="OnOpenFolderClick" />
+                        <Button x:Name="ClearButton" Style="{StaticResource GhostButton}" Content="清空记录" Foreground="#D9443C" BorderBrush="#F5C2BE"
+                                Margin="0,4,0,4" Click="OnClearClick" />
+                    </WrapPanel>
+                </Grid>
+            </ContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

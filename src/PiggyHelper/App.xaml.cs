@@ -107,6 +107,18 @@ public partial class App : Application
             Tray = new TrayService();
             Tray.OpenRequested += ShowMainWindow;
             Tray.ExitRequested += ExitApp;
+            Tray.ClipboardRequested += () =>
+            {
+                // 等托盘菜单收起来、前台窗口定下来再打开（没有要粘贴的地方：点一条只复制）
+                var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                t.Tick += (_, _) =>
+                {
+                    t.Stop();
+                    if (_clipboard != null) _clipboard.ShowPanel(IntPtr.Zero);
+                    else ShowMainWindow();
+                };
+                t.Start();
+            };
 
             _overlay = ShortcutOverlay.Shared;
             _hold = new HoldDetector();
@@ -125,6 +137,14 @@ public partial class App : Application
                 _clipboard.Start();
             }
             catch (Exception ex) { ClipLog.Error("启动小猪剪贴板", ex); }
+        }
+
+        if (smokeTest && startPage == "clipboard")
+        {
+            // 剪贴板页截图：用临时文件夹里的示例记录，不真的监听
+            var demo = new ClipboardFeature(Path.Combine(Path.GetTempPath(), "PiggyClipShot-" + Guid.NewGuid().ToString("N")[..8]));
+            ClipDemo.Fill(demo.Store);
+            demo.UseForPreview();
         }
 
         _main = new MainWindow();

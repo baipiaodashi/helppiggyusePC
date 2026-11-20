@@ -48,6 +48,8 @@ public partial class SettingsPage : UserControl
         SettingsService.Save();
     }
 
+    private void OnClipboardClick(object sender, RoutedEventArgs e) => _main.Navigate("clipboard");
+
     private void OnUpdateClick(object sender, RoutedEventArgs e)
     {
         try

@@ -121,7 +121,10 @@ jobs:
             @{ name = "16-ai-engine";   args = @("--page", "ai", "--auto", "engine-card") },
             @{ name = "17-clip-panel";  args = @("--page", "clip-panel") },
             @{ name = "18-clip-search"; args = @("--page", "clip-panel", "--query", "作业") },
-            @{ name = "19-clip-empty";  args = @("--page", "clip-empty") }
+            @{ name = "19-clip-empty";  args = @("--page", "clip-empty") },
+            @{ name = "20-clip-page";   args = @("--page", "clipboard") },
+            @{ name = "21-clip-page-2"; args = @("--page", "clipboard", "--auto", "bottom") },
+            @{ name = "22-clip-clear";  args = @("--page", "clipboard", "--auto", "clear") }
           )
           $failed = $false
           foreach ($c in $cases) {

@@ -15,7 +15,7 @@ public partial class PiggyMascot : System.Windows.Controls.UserControl
     public static readonly DependencyProperty AnimatedProperty = DependencyProperty.Register(
         nameof(Animated), typeof(bool), typeof(PiggyMascot), new PropertyMetadata(true));
 
-    /// <summary>小猪的动作：wave 招手、cheer 欢呼、broom 扫地、think 思考、search 放大镜、key 举键帽、face 只有脑袋、sleep 睡觉。</summary>
+    /// <summary>小猪的动作：wave 招手、cheer 欢呼、broom 扫地、think 思考、search 放大镜、key 举键帽、face 只有脑袋、sleep 睡觉、clip 拿着剪贴板。</summary>
     public string Pose { get => (string)GetValue(PoseProperty); set => SetValue(PoseProperty, value); }
 
     /// <summary>是否轻轻上下晃动。</summary>

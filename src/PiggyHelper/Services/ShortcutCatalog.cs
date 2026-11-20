@@ -81,7 +81,7 @@ public static class ShortcutCatalog
         new("Win+空格", "切换输入法", Typing, Pop: true),
         new("Shift", "中文 / 英文切换", Typing, "微软拼音、搜狗等大多数输入法都这样切换。"),
         new("Win+.", "打开表情符号面板", Typing, "可以输入 😀 这样的表情和特殊符号。", Pop: true),
-        new("Win+V", "剪贴板历史", Typing, "找回之前复制过的内容。第一次用需要点“打开”。", Pop: true, Popular: true),
+        new("Win+V", "剪贴板：找回复制过的内容", Typing, "复制过的文字、图片、文件都在这里，↑↓ 选一条，回车就粘贴。在小猪的“剪贴板”页可以换回 Windows 自带的。", Pop: true, Popular: true),
         new("Ctrl+B", "文字加粗", Typing, "Word、WPS 里都能用。", Pop: true),
         new("Ctrl+I", "文字倾斜", Typing),
         new("Ctrl+U", "文字加下划线", Typing),

@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         VersionText.Text = "v" + App.VersionText;
         _toastTimer.Tick += (_, _) => HideToast();
         StateChanged += (_, _) => UpdateMaximizeState();
+        SideCard.SizeChanged += (_, _) => FitSidebar();
         Closing += OnWindowClosing;
         NavHome.IsChecked = true;
         PreviewKeyDown += (_, e) =>
@@ -63,12 +64,27 @@ public partial class MainWindow : Window
         MaxButton.ToolTip = WindowState == WindowState.Maximized ? "还原" : "最大化";
     }
 
+    // ---------- 侧边栏：窗口矮的时候把上面的小猪变小 ----------
+    private void FitSidebar()
+    {
+        // 卡片上下各留 20 的边，底部版本号大约 20 高，每个菜单按钮 62 高
+        double room = SideCard.ActualHeight - 40 - 22 - NavList.Children.Count * 62;
+        if (room <= 0) return;
+        bool full = room >= 196, mid = room >= 128, small = room >= 70;
+        SideMascot.Width = SideMascot.Height = full ? 104 : mid ? 76 : 56;
+        SideTitle.Visibility = mid ? Visibility.Visible : Visibility.Collapsed;
+        SideSlogan.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
+        SideTop.Visibility = small ? Visibility.Visible : Visibility.Collapsed;
+        SideTop.Margin = new Thickness(0, 0, 0, full ? 22 : mid ? 14 : 10);
+    }
+
     // ---------- 页面切换 ----------
     private static string KeyOf(RadioButton rb) => rb.Name switch
     {
         nameof(NavNavigator) => "navigator",
         nameof(NavCleanup) => "cleanup",
         nameof(NavShortcuts) => "shortcuts",
+        nameof(NavClipboard) => "clipboard",
         nameof(NavAi) => "ai",
         nameof(NavSettings) => "settings",
         _ => "home",
@@ -89,6 +105,7 @@ public partial class MainWindow : Window
             "navigator" => NavNavigator,
             "cleanup" => NavCleanup,
             "shortcuts" => NavShortcuts,
+            "clipboard" => NavClipboard,
             "ai" => NavAi,
             "settings" => NavSettings,
             _ => NavHome,
@@ -107,6 +124,7 @@ public partial class MainWindow : Window
             "navigator" => new NavigatorPage(this, query),
             "cleanup" => new CleanupPage(this, sub),
             "shortcuts" => new ShortcutsPage(this),
+            "clipboard" => new ClipboardPage(this),
             // AI 页面一直留着：切到别的页面再回来，聊天记录和正在做的事都还在
             "ai" => _aiPage ??= new AiPage(this),
             "settings" => new SettingsPage(this),

@@ -25,11 +25,11 @@ public partial class ClipboardPanel : Window
     private readonly ClipboardStore _store;
     private readonly ClipboardHotkeys _hotkeys;
     private readonly Dictionary<string, ClipCardVm> _vms = new();
-    private readonly DispatcherTimer _searchTimer, _fgTimer, _toastTimer;
+    private readonly DispatcherTimer _searchTimer, _fgTimer, _toastTimer, _hideTimer;
     private readonly RadioButton[] _tabs;
     private ClipFilter _filter = ClipFilter.All;
     private List<ClipCardVm> _cards = new();
-    private IntPtr _hwnd, _target;
+    private IntPtr _hwnd, _target, _home;
     private bool _editing, _detached, _refreshQueued;
 
     /// <summary>点了设置按钮：打开小猪主窗口的剪贴板页。</summary>
@@ -43,6 +43,9 @@ public partial class ClipboardPanel : Window
     public IReadOnlyList<ClipCardVm> Cards => _cards;
     public int SelectedIndex => List.SelectedIndex;
     public IntPtr Target => _target;
+
+    /// <summary>没有要粘贴的地方（从托盘菜单、剪贴板页的按钮打开）：点卡片只复制，用户自己去按 Ctrl+V。</summary>
+    public bool CopyOnly => _target == IntPtr.Zero;
 
     /// <summary>用户换到别的软件时自动收起（自检时关掉，免得 CI 机器上前台窗口乱跳）。</summary>
     public bool FollowForeground { get; set; } = true;
@@ -60,6 +63,8 @@ public partial class ClipboardPanel : Window
         _fgTimer.Tick += (_, _) => WatchForeground();
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.6) };
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Toast.Visibility = Visibility.Collapsed; Hint.Visibility = Visibility.Visible; };
+        _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
+        _hideTimer.Tick += (_, _) => { _hideTimer.Stop(); if (!Pinned) HidePanel(); };
 
         SourceInitialized += (_, _) =>
         {
@@ -93,11 +98,16 @@ public partial class ClipboardPanel : Window
         Hide();
     }
 
-    /// <summary>打开小窗口。target 是按 Win+V 时最前面的窗口（粘贴到那里）。</summary>
+    /// <summary>
+    /// 打开小窗口。target 是按 Win+V 时最前面的窗口（粘贴到那里）；
+    /// IntPtr.Zero 表示没有要粘贴的地方，点卡片只复制。
+    /// </summary>
     public void ShowAt(IntPtr target)
     {
         _target = target;
+        _home = target != IntPtr.Zero ? target : Native.GetForegroundWindow();
         _detached = false;
+        _hideTimer.Stop();
         if (_editing) LeaveEditMode();
         _searchTimer.Stop();
         if (Search.Text.Length > 0)
@@ -129,6 +139,7 @@ public partial class ClipboardPanel : Window
     public void HidePanel()
     {
         _fgTimer.Stop();
+        _hideTimer.Stop();
         _hotkeys.Navigating = false;
         KeyboardHook.Shared.WatchMouse(false);
         if (_editing) LeaveEditMode();
@@ -466,17 +477,26 @@ public partial class ClipboardPanel : Window
         if (!IsVisible) { _fgTimer.Stop(); return; }
         if (!FollowForeground) return;
         var fg = Native.GetForegroundWindow();
-        if (fg == IntPtr.Zero || fg == _hwnd || fg == _target) return;
-        if (_target != IntPtr.Zero && Native.GetAncestor(fg, Native.GA_ROOT) == Native.GetAncestor(_target, Native.GA_ROOT)) return;
+        if (fg == IntPtr.Zero || fg == _hwnd || fg == _home) return;
+        if (_home != IntPtr.Zero && Native.GetAncestor(fg, Native.GA_ROOT) == Native.GetAncestor(_home, Native.GA_ROOT)) return;
+        // 只复制的时候，小猪自己的窗口（托盘菜单、主窗口）跳到前面不算换了软件
+        if (CopyOnly && IsOwnWindow(fg)) return;
         if (Pinned)
         {
             // 固定着：跟着用户换到新的软件，粘贴到那里
             _target = fg;
+            _home = fg;
             _detached = true;
             UpdateNavigating();
             return;
         }
         HidePanel();
+    }
+
+    private static bool IsOwnWindow(IntPtr hwnd)
+    {
+        Native.GetWindowThreadProcessId(hwnd, out uint pid);
+        return pid == (uint)Environment.ProcessId;
     }
 
     private static ClipCardVm? VmOf(object sender) => (sender as FrameworkElement)?.DataContext as ClipCardVm;
@@ -611,6 +631,19 @@ public partial class ClipboardPanel : Window
         }
         _store.Touch(item.Id);
 
+        if (CopyOnly || !Native.IsWindow(_target))
+        {
+            // 没有要粘贴的地方：复制好就行，稍等一下再收起，让用户看到提示
+            _target = IntPtr.Zero;
+            if (_editing) LeaveEditMode();
+            ShowToast("复制好了！到要用的地方按 Ctrl+V 就能粘贴");
+            _hideTimer.Stop();
+            if (!Pinned) _hideTimer.Start();
+            ClipLog.Write($"复制：{item.Kind}{(plain ? "（纯文字）" : "")}");
+            Pasted?.Invoke(item);
+            return;
+        }
+
         var target = _target;
         bool wasEditing = _editing;
         if (Pinned) { if (wasEditing) LeaveEditMode(); }
@@ -643,6 +676,7 @@ public partial class ClipboardPanel : Window
     public void ShowForScreenshot()
     {
         _target = IntPtr.Zero;
+        _home = IntPtr.Zero;
         Refresh(resetSelection: true);
         Left = 40;
         Top = 40;

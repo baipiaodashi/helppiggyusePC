@@ -20,7 +20,13 @@ public sealed class ClipboardFeature
     private readonly DispatcherTimer _hourly;
     private readonly Func<int, bool, bool> _intercept;
     private ClipboardPanel? _panel;
-    private bool _started;
+    private bool _started, _preview;
+
+    /// <summary>键盘监听没能启动（可能被安全软件拦了），Win+V 用不了。</summary>
+    public bool HotkeysFailed { get; private set; }
+
+    /// <summary>只是截图用的示例，没有真的在监听。</summary>
+    public bool IsPreview => _preview;
 
     /// <summary>有新复制的内容记下来了（界面线程）。</summary>
     public event Action<ClipItem>? Captured;
@@ -77,19 +83,32 @@ public sealed class ClipboardFeature
             var hook = KeyboardHook.Shared;
             hook.Interceptor = _intercept;
             hook.MouseDown += OnMouseDown;
-            if (!hook.Start()) ClipLog.Write("键盘监听没能启动，Win+V 用不了");
+            if (!hook.Start())
+            {
+                HotkeysFailed = true;
+                ClipLog.Write("键盘监听没能启动，Win+V 用不了");
+            }
         }
         ApplySettings();
         _hourly.Start();
         Store.CleanupOrphansInBackground();
     }
 
-    /// <summary>设置改了以后调用：开关监听和 Win+V、按新的条数和天数清理。</summary>
+    /// <summary>截图用：当作"正在运行的那一个"给剪贴板页看，不监听剪贴板、不接管 Win+V。</summary>
+    public void UseForPreview()
+    {
+        _preview = true;
+        Current = this;
+    }
+
+    /// <summary>设置改了以后调用：开关记录和 Win+V、按新的条数和天数清理。</summary>
     public void ApplySettings()
     {
+        if (_preview) return;
         if (S.ClipboardEnabled) Monitor.Start();
         else Monitor.Stop();
-        Hotkeys.WinVEnabled = _started && S.ClipboardEnabled && S.ClipboardWinV && KeyboardHook.Shared.Interceptor == _intercept;
+        // 暂停记录时 Win+V 照样能打开（已经记下的、收藏的还能用）
+        Hotkeys.WinVEnabled = _started && S.ClipboardWinV && KeyboardHook.Shared.Interceptor == _intercept;
         if (!Hotkeys.WinVEnabled) _panel?.HidePanel();
         Store.Prune();
     }

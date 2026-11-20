@@ -71,14 +71,15 @@
         </DockPanel>
 
         <!-- ========== 左侧菜单 ========== -->
-        <ContentControl Grid.Row="1" Style="{StaticResource Card}" Background="{StaticResource SidebarBrush}"
+        <ContentControl x:Name="SideCard" Grid.Row="1" Style="{StaticResource Card}" Background="{StaticResource SidebarBrush}"
                         Margin="16,4,4,16" Padding="14,20">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,0,0,22">
-                    <controls:PiggyMascot Width="104" Height="104" Pose="wave" />
-                    <TextBlock Text="小猪电脑助手" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                <!-- 窗口矮的时候（比如小屏幕笔记本），这一块会变小，保证下面的菜单都放得下 -->
+                <StackPanel x:Name="SideTop" DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,0,0,22">
+                    <controls:PiggyMascot x:Name="SideMascot" Width="104" Height="104" Pose="wave" />
+                    <TextBlock x:Name="SideTitle" Text="小猪电脑助手" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
                                Foreground="{StaticResource PinkDeepBrush}" Margin="0,8,0,0" />
-                    <Border Background="{StaticResource PinkSoftBrush}" CornerRadius="10" Padding="10,3" Margin="0,6,0,0"
+                    <Border x:Name="SideSlogan" Background="{StaticResource PinkSoftBrush}" CornerRadius="10" Padding="10,3" Margin="0,6,0,0"
                             HorizontalAlignment="Center">
                         <TextBlock Text="电脑不会用？问小猪！" FontSize="12" Foreground="{StaticResource PinkDeepBrush}" />
                     </Border>
@@ -87,11 +88,12 @@
                 <TextBlock x:Name="VersionText" DockPanel.Dock="Bottom" FontSize="12"
                            Foreground="{StaticResource FaintTextBrush}" HorizontalAlignment="Center" />
 
-                <StackPanel>
+                <StackPanel x:Name="NavList">
                     <RadioButton x:Name="NavHome" Style="{StaticResource SideNavButton}" Tag="&#xE80F;" Content="首页" Checked="OnSideNavChecked" />
                     <RadioButton x:Name="NavNavigator" Style="{StaticResource SideNavButton}" Tag="&#xE71D;" Content="功能导航" Checked="OnSideNavChecked" />
                     <RadioButton x:Name="NavCleanup" Style="{StaticResource SideNavButton}" Tag="&#xE74D;" Content="一键清理" Checked="OnSideNavChecked" />
                     <RadioButton x:Name="NavShortcuts" Style="{StaticResource SideNavButton}" Tag="&#xE765;" Content="快捷键" Checked="OnSideNavChecked" />
+                    <RadioButton x:Name="NavClipboard" Style="{StaticResource SideNavButton}" Tag="&#xE77F;" Content="剪贴板" Checked="OnSideNavChecked" />
                     <RadioButton x:Name="NavAi" Style="{StaticResource SideNavButton}" Tag="&#xE8BD;" Content="AI 问答" Checked="OnSideNavChecked" />
                     <RadioButton x:Name="NavSettings" Style="{StaticResource SideNavButton}" Tag="&#xE713;" Content="设置" Checked="OnSideNavChecked" />
                 </StackPanel>

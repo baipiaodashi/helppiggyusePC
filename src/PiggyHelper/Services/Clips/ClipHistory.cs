@@ -124,6 +124,20 @@ public sealed class ClipHistory
         return removed;
     }
 
+    /// <summary>按这个设置会删掉几条（只数一数，不真的删；设置页改小之前提醒用）。</summary>
+    public int CountPrunable(int maxItems, int keepDays, DateTime now)
+    {
+        var cutoff = keepDays > 0 ? now.AddDays(-keepDays) : DateTime.MinValue;
+        int kept = 0, n = 0;
+        foreach (var it in _items)
+        {
+            if (it.Favorite) continue;
+            if (it.UsedAt < cutoff || kept >= Math.Max(1, maxItems)) n++;
+            else kept++;
+        }
+        return n;
+    }
+
     /// <summary>按分类和搜索词筛选。搜索词用空格分开时，每个词都要出现（不分大小写）。</summary>
     public List<ClipItem> Query(ClipFilter filter, string? search)
     {

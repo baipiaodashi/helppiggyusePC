@@ -20,16 +20,23 @@ public class AdaptiveGrid : Panel
         nameof(MaxColumns), typeof(int), typeof(AdaptiveGrid),
         new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly DependencyProperty EvenColumnsProperty = DependencyProperty.Register(
+        nameof(EvenColumns), typeof(bool), typeof(AdaptiveGrid),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
     public double MinItemWidth { get => (double)GetValue(MinItemWidthProperty); set => SetValue(MinItemWidthProperty, value); }
     public double Spacing { get => (double)GetValue(SpacingProperty); set => SetValue(SpacingProperty, value); }
     /// <summary>最多几列（0 表示不限）。</summary>
     public int MaxColumns { get => (int)GetValue(MaxColumnsProperty); set => SetValue(MaxColumnsProperty, value); }
+    /// <summary>只用双数列（比如 4 个格子排成 2×2 或 4×1，不会排成 3+1）。</summary>
+    public bool EvenColumns { get => (bool)GetValue(EvenColumnsProperty); set => SetValue(EvenColumnsProperty, value); }
 
     private int Columns(double width)
     {
         if (double.IsInfinity(width) || width <= 0) return Math.Max(1, MaxColumns);
         int cols = Math.Max(1, (int)((width + Spacing) / (MinItemWidth + Spacing)));
         if (MaxColumns > 0) cols = Math.Min(cols, MaxColumns);
+        if (EvenColumns && cols > 1 && cols % 2 == 1) cols--;
         return cols;
     }
 

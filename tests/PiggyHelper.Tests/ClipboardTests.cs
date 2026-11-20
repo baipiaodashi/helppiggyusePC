@@ -211,8 +211,13 @@ public class ClipHistoryTests
         var oldest = h.Items[^1];
         h.SetFavorite(oldest.Id, true);
 
+        Assert.Equal(4, h.CountPrunable(maxItems: 5, keepDays: 0, now: T0.AddDays(10)));
+        Assert.Equal(0, h.CountPrunable(maxItems: 100, keepDays: 0, now: T0.AddDays(10)));
+        Assert.Equal(10, h.Count);   // 只是数一数，没有删
+
         var removed = h.Prune(maxItems: 5, keepDays: 0, now: T0.AddDays(10));
         Assert.Equal(4, removed.Count);   // t1..t4（t0 收藏了）
+        Assert.Equal(2, h.CountPrunable(maxItems: 100, keepDays: 3, now: T0.AddDays(10)));
         Assert.Equal(6, h.Count);
         Assert.Contains(h.Items, x => x.Text == "t0");
         Assert.DoesNotContain(h.Items, x => x.Text == "t4");

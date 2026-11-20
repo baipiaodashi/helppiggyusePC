@@ -12,7 +12,7 @@ public partial class HomePage : UserControl
 
     private static readonly string[] Bubbles =
     {
-        "今天也要元气满满！", "有问题尽管问～", "C 盘还好吗？", "试试按住 Ctrl 一秒！", "小猪随时待命！",
+        "今天也要元气满满！", "有问题尽管问～", "C 盘还好吗？", "试试按住 Ctrl 一秒！", "小猪随时待命！", "试试按 Win+V！",
     };
 
     public HomePage(MainWindow main)

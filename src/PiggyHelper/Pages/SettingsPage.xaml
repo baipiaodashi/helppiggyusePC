@@ -90,6 +90,20 @@
                 </StackPanel>
             </ContentControl>
 
+            <!-- 剪贴板 -->
+            <TextBlock Text="小猪剪贴板" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
+            <ContentControl Style="{StaticResource Card}" Padding="24,20">
+                <DockPanel>
+                    <controls:PiggyMascot Width="64" Height="64" DockPanel.Dock="Left" Margin="-4,-6,14,-6" Pose="clip" Animated="False" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="去剪贴板页设置" VerticalAlignment="Center"
+                            Margin="16,0,0,0" Click="OnClipboardClick" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Win+V、记多少条、哪些软件里复制的不记" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="这些都在左边菜单的&#x201C;剪贴板&#x201D;页里，还能清空记录。" Style="{StaticResource RowDesc}" />
+                    </StackPanel>
+                </DockPanel>
+            </ContentControl>
+
             <!-- AI -->
             <TextBlock Text="AI 问答" Style="{StaticResource SectionTitle}" Margin="4,26,0,12" />
             <ContentControl Style="{StaticResource Card}" Padding="24,20">

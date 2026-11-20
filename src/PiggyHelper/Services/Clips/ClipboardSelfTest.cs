@@ -250,6 +250,28 @@ public static class ClipboardSelfTest
         await WaitUntil(() => box.Text.Contains(pasteText), 1500);
         Soft("模拟 Ctrl+V，文字进了原来的输入框", box.Text.Contains(pasteText), foreground, $"输入框里是「{box.Text}」");
 
+        // 从托盘菜单 / 剪贴板页打开（没有要粘贴的地方）：回车只复制，提示一下再收起
+        feature.ShowPanel(IntPtr.Zero);
+        await Task.Delay(200);
+        int ti = panel.Cards.ToList().FindIndex(1, c => c.Item.Kind == ClipKind.Text && !c.Item.Sensitive);
+        for (int i = 0; i < ti; i++)
+        {
+            feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, true);
+            feature.Hotkeys.Intercept(ClipboardHotkeys.VK_DOWN, false);
+        }
+        await Task.Delay(150);
+        var expect = ti > 0 && panel.SelectedIndex == ti ? panel.Cards[ti].Item : null;
+        string boxBefore = box.Text;
+        pasted = null;
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_RETURN, true);
+        feature.Hotkeys.Intercept(ClipboardHotkeys.VK_RETURN, false);
+        await WaitUntil(() => pasted != null, 2000);
+        Check("只复制模式：回车把那条放进剪贴板，小窗口先留着显示提示", expect != null && pasted == expect && panel.IsVisible && panel.CopyOnly
+            && System.Windows.Clipboard.GetText() == expect.Text, expect == null ? "没找到能选的文字" : pasted == null ? "没复制" : $"小窗口 {panel.IsVisible}");
+        await WaitUntil(() => !panel.IsVisible, 3000);
+        await Task.Delay(200);
+        Check("只复制模式：提示完自动收起，不往别的软件里粘贴", !panel.IsVisible && box.Text == boxBefore, $"输入框里是「{box.Text}」");
+
         // 真的按 Win+V（模拟按键，不带小猪的记号）
         box.Clear();
         win.Activate();
